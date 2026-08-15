@@ -88,11 +88,6 @@ export default function Footer({ onOpenAuth }) {
                   Cara Belanja
                 </a>
               </li>
-              <li>
-                <a href="#tentang" onClick={(e) => { e.preventDefault(); scrollTo("tentang"); }}>
-                  Profil Desa
-                </a>
-              </li>
             </ul>
           </div>
 
