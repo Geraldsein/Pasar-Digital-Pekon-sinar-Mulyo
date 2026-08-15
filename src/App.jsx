@@ -307,7 +307,7 @@ export default function App() {
     }
   };
 
-  if (showAdminDashboard) {
+  if (showAdminDashboard && currentUser?.role === 'admin') {
     return (
       <div className="app-container">
         <ErrorBoundary>
@@ -339,7 +339,7 @@ export default function App() {
     );
   }
 
-  if (showSuperAdminDashboard) {
+  if (showSuperAdminDashboard && currentUser?.role === 'superadmin') {
     return (
       <div className="app-container">
         <ErrorBoundary>
@@ -369,7 +369,7 @@ export default function App() {
     );
   }
 
-  if (showUmkmDashboard) {
+  if (showUmkmDashboard && currentUser?.role === 'umkm') {
     return (
       <div className="app-container">
         <ErrorBoundary>

@@ -7,8 +7,19 @@ export default function LocationModal({ product, onClose }) {
 
   const sellerAddress = product.location || `Dusun Krajan RT 03/RW 01, Desa Sukamaju, Kec. Digital, Kabupaten UMKM`;
   const encodedAddress = encodeURIComponent(`${product.sellerName} ${sellerAddress}`);
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-  const mapEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=115.15%2C-8.45%2C115.30%2C-8.30&layer=mapnik&marker=-8.375%2C115.225`;
+  const hasCoords = product.lat != null && product.lng != null;
+  const lat = hasCoords ? Number(product.lat) : null;
+  const lng = hasCoords ? Number(product.lng) : null;
+
+  // Google Maps link: pakai koordinat jika ada, kalau tidak fallback ke pencarian alamat
+  const googleMapsUrl = hasCoords
+    ? `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+
+  // Embedded map: Google Maps embed pakai koordinat (tanpa API key), fallback ke OpenStreetMap
+  const mapEmbedUrl = hasCoords
+    ? `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`
+    : `https://www.openstreetmap.org/export/embed.html?bbox=115.15%2C-8.45%2C115.30%2C-8.30&layer=mapnik&marker=-8.375%2C115.225`;
 
   return (
     <BaseModal isOpen={true} onClose={onClose} title="Peta & Lokasi UMKM">

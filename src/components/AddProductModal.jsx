@@ -148,6 +148,25 @@ export default function AddProductModal({
 
       setUploadProgress("Menyimpan data produk...");
 
+      // Ambil lokasi dari profil usaha akun UMKM (set di Profil Usaha)
+      let sellerLocation = null;
+      let sellerLat = null;
+      let sellerLng = null;
+      if (supabase && isSupabaseConfigured && currentUser?.id) {
+        try {
+          const { data: sellerRow } = await supabase
+            .from("sellers")
+            .select("location, lat, lng")
+            .eq("user_id", currentUser.id)
+            .maybeSingle();
+          if (sellerRow) {
+            sellerLocation = sellerRow.location || null;
+            sellerLat = sellerRow.lat != null ? sellerRow.lat : null;
+            sellerLng = sellerRow.lng != null ? sellerRow.lng : null;
+          }
+        } catch (e) { console.warn("Gagal ambil lokasi penjual:", e); }
+      }
+
       const newProductData = {
         title,
         category,
@@ -165,7 +184,9 @@ export default function AddProductModal({
         seller_name: sellerName || "Penjual Desa",
         sellerPhone: "62" + phoneSuffix,
         seller_phone: "62" + phoneSuffix,
-        location,
+        location: sellerLocation,
+        lat: sellerLat,
+        lng: sellerLng,
         image: finalImageUrl,
         user_id: currentUser?.id || null,
       };
@@ -189,6 +210,8 @@ export default function AddProductModal({
           business_name: newProductData.business_name,
           nib: newProductData.nib,
           location: newProductData.location,
+          lat: newProductData.lat,
+          lng: newProductData.lng,
           user_id: newProductData.user_id,
         };
 

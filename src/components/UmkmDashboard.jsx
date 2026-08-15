@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Package, ShieldAlert, CheckCircle2, Edit3, Trash2, PlusCircle, Search, Box } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { LayoutDashboard, Package, ShieldAlert, CheckCircle2, Edit3, Trash2, PlusCircle, Search, Box, Store, Navigation, Save } from 'lucide-react';
 import DashboardLayout from './ui/DashboardLayout';
 import StatCard from './ui/StatCard';
 import EditProductModal from './EditProductModal';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export default function UmkmDashboard({ products, categories, currentUser, onAddProduct, onDeleteProduct, onProductUpdated, onBack }) {
   const [activePanel, setActivePanel] = useState('dashboard');
@@ -11,6 +12,19 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
+  // Seller profile state
+  const [businessName, setBusinessName] = useState('');
+  const [nib, setNib] = useState('');
+  const [phone, setPhone] = useState('');
+  const [location, setLocation] = useState('');
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [profileMsg, setProfileMsg] = useState('');
+  const [profileErr, setProfileErr] = useState('');
+
   const owner = currentUser?.id;
   const userName = currentUser?.user_metadata?.full_name || currentUser?.username || currentUser?.email?.split('@')[0] || 'UMKM';
 
@@ -18,6 +32,81 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
     (products || []).filter(p => p && p.user_id && p.user_id === owner),
     [products, owner]
   );
+
+  // Load seller profile on mount
+  useEffect(() => {
+    if (!owner) { setProfileLoading(false); return; }
+    const loadProfile = async () => {
+      if (supabase && isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('sellers')
+            .select('*')
+            .eq('user_id', owner)
+            .maybeSingle();
+          if (!error && data) {
+            setBusinessName(data.business_name || '');
+            setNib(data.nib || '');
+            setPhone(data.phone || '');
+            setLocation(data.location || '');
+            setLat(data.lat != null ? String(data.lat) : '');
+            setLng(data.lng != null ? String(data.lng) : '');
+          }
+        } catch (e) { console.warn('Gagal memuat profil:', e); }
+      }
+      setProfileLoading(false);
+    };
+    loadProfile();
+  }, [owner]);
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) { setProfileErr('Browser tidak mendukung geolokasi.'); return; }
+    setLocating(true);
+    setProfileErr('');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude.toFixed(6));
+        setLng(pos.coords.longitude.toFixed(6));
+        setLocating(false);
+      },
+      (err) => {
+        setProfileErr('Gagal mengambil lokasi: ' + (err.message || 'izin ditolak'));
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleSaveProfile = async () => {
+    if (!owner) return;
+    if (!supabase || !isSupabaseConfigured) {
+      setProfileErr('Supabase belum dikonfigurasi.');
+      return;
+    }
+    setProfileSaving(true);
+    setProfileErr('');
+    setProfileMsg('');
+    try {
+      const payload = {
+        user_id: owner,
+        phone: phone || (currentUser?.email || ''),
+        business_name: businessName || null,
+        nib: nib || null,
+        location: location || null,
+        lat: lat ? Number(lat) : null,
+        lng: lng ? Number(lng) : null,
+      };
+      const { error } = await supabase
+        .from('sellers')
+        .upsert(payload, { onConflict: 'user_id' });
+      if (error) throw error;
+      setProfileMsg('Profil usaha berhasil disimpan.');
+    } catch (e) {
+      setProfileErr(e.message || 'Gagal menyimpan profil.');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const handleEdit = (product) => { setEditingProduct(product); setShowEditModal(true); };
   const handleDelete = (productId) => {
@@ -45,7 +134,14 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
   const sidebarItems = [
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { key: 'products', label: 'Produk Saya', icon: Package },
+    { key: 'profile', label: 'Profil Usaha', icon: Store },
   ];
+
+  const inputStyle = {
+    width: '100%', padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: '8px',
+    fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+  };
+  const labelStyle = { display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: '#1E293B' };
 
   const renderDashboard = () => (
     <div>
@@ -58,8 +154,98 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
         <StatCard icon={CheckCircle2} label="Terverifikasi" value={myProducts.filter(p => p.verified).length} color="#2563EB" bg="#EFF6FF" />
       </div>
       <p style={{ fontSize: '0.9rem', color: '#64748B', marginTop: '20px' }}>
-        Tambahkan produk baru, lalu pantau status verifikasinya di sini. Produk yang sudah terverifikasi akan tampil di katalog publik.
+        Lengkapi <strong>Profil Usaha</strong> (termasuk lokasi Google Maps) agar pembeli dapat menemukan lokasi usaha Anda.
+        Tambahkan produk baru, lalu pantau status verifikasinya di sini.
       </p>
+    </div>
+  );
+
+  const renderProfile = () => (
+    <div style={{ maxWidth: '640px' }}>
+      <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1E293B', marginBottom: '6px' }}>Profil Usaha</h3>
+      <p style={{ fontSize: '0.9rem', color: '#64748B', marginBottom: '20px' }}>
+        Data ini dipakai untuk akun UMKM Anda. Lokasi usaha akan otomatis dipakai sebagai lokasi produk yang Anda tambahkan.
+      </p>
+
+      {profileErr && (
+        <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '12px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px' }}>
+          {profileErr}
+        </div>
+      )}
+      {profileMsg && (
+        <div style={{ background: '#DCFCE7', color: '#166534', padding: '12px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px' }}>
+          {profileMsg}
+        </div>
+      )}
+
+      {profileLoading ? (
+        <div style={{ textAlign: 'center', padding: '60px', color: '#64748B' }}>Memuat profil...</div>
+      ) : (
+        <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+            <div>
+              <label style={labelStyle}>Nama Usaha / UMKM</label>
+              <input style={inputStyle} value={businessName} onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="Nama usaha Anda" />
+            </div>
+            <div>
+              <label style={labelStyle}>NIB</label>
+              <input style={inputStyle} value={nib} onChange={(e) => setNib(e.target.value)} placeholder="Nomor Induk Berusaha" />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>No. WhatsApp</label>
+            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #CBD5E1', borderRadius: '8px', overflow: 'hidden' }}>
+              <span style={{ padding: '10px 0 10px 14px', fontSize: '0.9rem', color: '#94A3B8', fontWeight: 600, userSelect: 'none', background: '#F8FAFC', borderRight: '1px solid #E2E8F0' }}>+62</span>
+              <input style={{ flex: 1, padding: '10px 12px', border: 'none', fontSize: '0.9rem', outline: 'none' }}
+                value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="81234567890" />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>Alamat Usaha</label>
+            <textarea rows={2} style={inputStyle} value={location} onChange={(e) => setLocation(e.target.value)}
+              placeholder="Dusun, Desa, Kecamatan, Kabupaten..." />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Lokasi Google Maps</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+              <input style={inputStyle} value={lat} onChange={(e) => setLat(e.target.value)} placeholder="Latitude (mis. -8.375000)" />
+              <input style={inputStyle} value={lng} onChange={(e) => setLng(e.target.value)} placeholder="Longitude (mis. 115.225000)" />
+            </div>
+            <button
+              onClick={handleGetLocation}
+              disabled={locating}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: '#059669', color: 'white', border: 'none', padding: '10px 18px',
+                borderRadius: '8px', fontWeight: 600, fontSize: '0.875rem', cursor: locating ? 'not-allowed' : 'pointer', opacity: locating ? 0.7 : 1
+              }}
+            >
+              <Navigation size={16} />
+              {locating ? 'Mengambil lokasi...' : 'Ambil Lokasi Saya (GPS)'}
+            </button>
+            <p style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '6px' }}>
+              Klik tombol untuk otomatis mengisi koordinat dari perangkat, atau isi manual.
+            </p>
+          </div>
+
+          <button
+            onClick={handleSaveProfile}
+            disabled={profileSaving}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: '#1E40AF', color: 'white', border: 'none', padding: '12px', borderRadius: '10px',
+              fontWeight: 700, fontSize: '0.95rem', cursor: profileSaving ? 'not-allowed' : 'pointer', opacity: profileSaving ? 0.75 : 1
+            }}
+          >
+            <Save size={18} />
+            {profileSaving ? 'Menyimpan...' : 'Simpan Profil Usaha'}
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -155,6 +341,7 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
     >
       {activePanel === 'dashboard' && renderDashboard()}
       {activePanel === 'products' && renderProducts()}
+      {activePanel === 'profile' && renderProfile()}
 
       {showEditModal && editingProduct && (
         <EditProductModal
