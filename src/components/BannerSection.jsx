@@ -28,19 +28,6 @@ export default function BannerSection({ onLearnMore }) {
             </button>
           </div>
 
-          {/* Right Angled Image Frame */}
-          <div className="banner-img-container">
-            <div className="banner-img-frame">
-              <img
-                src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80"
-                alt="Kebanggaan Lokal"
-                className="banner-img"
-              />
-            </div>
-            <div className="banner-badge-bottom">
-              Kebanggaan Lokal
-            </div>
-          </div>
         </div>
       </div>
     </section>
