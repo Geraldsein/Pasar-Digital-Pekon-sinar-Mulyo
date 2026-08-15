@@ -1,0 +1,270 @@
+import React, { useState } from 'react';
+import { Store } from 'lucide-react';
+import BaseModal from "./ui/BaseModal";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
+
+export default function AuthModal({ onClose, onAuthSuccess }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        if (!email || !password) {
+          throw new Error('Email dan password tidak boleh kosong');
+        }
+
+        if (!supabase || !isSupabaseConfigured) {
+          throw new Error('Supabase belum dikonfigurasi. Isi .env lalu restart.');
+        }
+
+        // Real Supabase login
+        const emailInput = email.includes('@') ? email : `${email}@umkmdesa.id`;
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: emailInput,
+          password: password
+        });
+
+        if (error) throw error;
+        if (data.user) {
+          // Role will be determined by App.jsx via detectUserRole
+          if (onAuthSuccess) onAuthSuccess(data.user);
+        }
+      } else {
+        if (!fullName || !email || !password || !confirmPassword) {
+          throw new Error('Semua field harus diisi');
+        }
+        if (password !== confirmPassword) {
+          throw new Error('Password dan konfirmasi password tidak cocok');
+        }
+        if (password.length < 6) {
+          throw new Error('Password minimal 6 karakter');
+        }
+
+        // Cek apakah email sudah terdaftar sebagai Admin — jika iya, blokir pendaftaran mandiri
+        if (supabase && isSupabaseConfigured) {
+          const { data: adminCheck } = await supabase
+            .from('admin_users')
+            .select('role')
+            .eq('email', email.trim().toLowerCase())
+            .maybeSingle();
+
+          if (adminCheck) {
+            throw new Error(
+              adminCheck.role === 'superadmin'
+                ? 'Akun ini adalah Super Admin. Silakan login langsung di kolom Login.'
+                : 'Akun admin ini sudah dibuat oleh Super Admin. Silakan login langsung — tidak perlu mendaftar lagi.'
+            );
+          }
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: { data: { full_name: fullName } }
+        });
+
+        if (error) throw error;
+        if (data.user) {
+          // User created, will auto-login and redirect to UMKM dashboard
+          if (onAuthSuccess) onAuthSuccess(data.user);
+        }
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Terjadi kesalahan.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setErrorMsg('');
+    setFullName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+  };
+
+  return (
+    <BaseModal isOpen={true} onClose={onClose} title="Pasar Digital Desa">
+      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <div style={{
+          width: '64px', height: '64px',
+          background: 'linear-gradient(135deg, #0F2C59 0%, #1E40AF 100%)',
+          color: 'white', borderRadius: '16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 16px', fontSize: '1.5rem'
+        }}>
+          <Store size={32} />
+        </div>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1E293B', margin: '0 0 8px' }}>
+          Pasar Digital Desa
+        </h2>
+        <p style={{ color: '#64748B', fontSize: '0.95rem', margin: 0 }}>
+          Pasar Digital Produk Lokal
+        </p>
+      </div>
+
+      <div style={{
+        background: 'white', border: '1px solid #E5E7EB',
+        borderRadius: '16px', padding: '32px', marginBottom: '0'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1E293B', margin: '0 0 8px' }}>
+            {isLogin ? 'Masuk ke Akun' : 'Buat Akun Baru'}
+          </h3>
+          <p style={{ color: '#64748B', fontSize: '0.95rem', margin: '4px 0 0' }}>
+            {isLogin ? 'Masuk untuk memilih peran Anda' : 'Daftar untuk memulai'}
+          </p>
+        </div>
+
+        {errorMsg && (
+          <div style={{
+            background: '#FEE2E2', color: '#991B1B', padding: '12px 14px',
+            borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px',
+            display: 'flex', alignItems: 'center', gap: '8px'
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          {!isLogin && (
+            <div style={{ marginBottom: '20px' }}>
+              <label htmlFor="fullName" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px', color: '#1E293B' }}>
+                Nama Lengkap
+              </label>
+              <input
+                type="text" id="fullName" required
+                placeholder="Nama lengkap Anda"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                style={{ width: '100%', padding: '12px 16px', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+          )}
+
+          <div style={{ marginBottom: '20px' }}>
+            <label htmlFor="email" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px', color: '#1E293B' }}>
+              Email
+            </label>
+            <input
+              type="email" id="email" required
+              placeholder="email@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{ width: '100%', padding: '12px 16px', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px', position: 'relative' }}>
+            <label htmlFor="password" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px', color: '#1E293B' }}>
+              Password
+            </label>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              required
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ width: '100%', padding: '12px 16px', paddingRight: '44px', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              {showPassword ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-4.47 0-8.26-3.63-9.9-8.1A9.9 9.9 0 0 1 4.1 4.1A10.07 10.07 0 0 1 17.94 17.94z" />
+                  <path d="M1 1l22 22" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {!isLogin && (
+            <div style={{ marginBottom: '20px', position: 'relative' }}>
+              <label htmlFor="confirmPassword" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px', color: '#1E293B' }}>
+                Konfirmasi Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  id="confirmPassword"
+                  required
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  style={{ width: '100%', padding: '12px 16px 12px 16px', paddingRight: '44px', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {showConfirmPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-4.47 0-8.26-3.63-9.9-8.1A9.9 9.9 0 0 1 4.1 4.1A10.07 10.07 0 0 1 17.94 17.94z" />
+                      <path d="M1 1l22 22" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button type="submit" disabled={loading} style={{
+            width: '100%', backgroundColor: '#1E40AF', color: 'white', border: 'none',
+            padding: '14px', borderRadius: '10px', fontWeight: 700, fontSize: '1rem',
+            cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.8 : 1,
+          }}>
+            {loading ? 'Memproses...' : (isLogin ? 'Masuk' : 'Daftar')}
+          </button>
+        </form>
+
+        <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
+          <p style={{ fontSize: '0.85rem', color: '#64748B', margin: '0 0 12px' }}>
+            {isLogin ? 'Belum punya akun?' : 'Sudah punya akun?'}
+          </p>
+          <button onClick={toggleMode} style={{
+            background: 'none', border: 'none', color: '#1E40AF', fontSize: '0.9rem',
+            fontWeight: 700, cursor: 'pointer', textDecoration: 'underline'
+          }}>
+            {isLogin ? 'Buat Akun Sekarang' : 'Masuk ke Akun'}
+          </button>
+        </div>
+
+        {isLogin && (
+          <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#94A3B8', margin: '20px 0 0', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
+            Login menggunakan akun yang sudah terdaftar.
+          </p>
+        )}
+      </div>
+    </BaseModal>
+  );
+}

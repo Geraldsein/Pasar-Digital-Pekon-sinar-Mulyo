@@ -1,0 +1,1447 @@
+\documentclass[12pt,a4paper]{article}
+
+% =========================================================
+% COMPILER OVERLEAF: XeLaTeX
+% =========================================================
+\usepackage{fontspec}
+\usepackage[indonesian]{babel}
+
+\IfFontExistsTF{Times New Roman}
+    {\setmainfont{Times New Roman}}
+    {\IfFontExistsTF{Times New Roman}
+        {\setmainfont{Times New Roman}}
+        {\setmainfont{Times New Roman}}}
+
+% =========================================================
+% PACKAGE
+% =========================================================
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{ragged2e}
+\usepackage{indentfirst}
+\usepackage[none]{hyphenat}
+\usepackage[hidelinks]{hyperref}
+
+% =========================================================
+% MARGIN SESUAI PEDOMAN
+% =========================================================
+\usepackage[
+    a4paper,
+    top=3cm,
+    bottom=3cm,
+    left=4cm,
+    right=3cm
+]{geometry}
+
+% =========================================================
+% PENGATURAN UMUM
+% =========================================================
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+
+\setlength{\emergencystretch}{1em}
+
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+
+\pretolerance=100
+\tolerance=1000
+
+\setlist[enumerate]{
+    parsep=0pt,
+    partopsep=0pt,
+    listparindent=1.25cm
+}
+
+\newcommand{\headingfont}{\fontsize{14}{17}\selectfont}
+\newcommand{\normalfontsize}{\fontsize{12}{18}\selectfont}
+
+\newcommand{\placeholder}[1]{\textit{[#1]}}
+
+\newcommand{\reportfigure}[4][0.88\textwidth]{%
+    \begin{figure}[H]
+        \centering
+        \IfFileExists{#2}{%
+            \includegraphics[
+                width=#1,
+                height=8cm,
+                keepaspectratio
+            ]{#2}%
+        }{%
+            \fbox{%
+                \parbox[c][5.5cm][c]{0.82\textwidth}{%
+                    \centering
+                    File \texttt{#2} belum tersedia.\\
+                    Masukkan tangkapan layar dengan nama file tersebut
+                    ke folder yang sama dengan file LaTeX.
+                }%
+            }%
+        }
+        \caption{#3}
+        \label{#4}
+    \end{figure}
+}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+\addto\captionsindonesian{%
+    \renewcommand{\contentsname}{DAFTAR ISI}%
+    \renewcommand{\listfigurename}{DAFTAR GAMBAR}%
+    \renewcommand{\listtablename}{DAFTAR TABEL}%
+    \renewcommand{\figurename}{Gambar}%
+    \renewcommand{\tablename}{Tabel}%
+}
+
+% =========================================================
+% FORMAT BAB DAN SUBBAB
+% =========================================================
+\renewcommand{\thesection}{\Roman{section}}
+\renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+
+\titleformat{\section}[display]
+    {\centering\headingfont\bfseries}
+    {BAB \thesection}
+    {0pt}
+    {\MakeUppercase}
+
+\titlespacing*{\section}{0pt}{0pt}{1cm}
+
+\titleformat{\subsection}
+    {\headingfont\bfseries}
+    {\thesubsection}
+    {0.75em}
+    {}
+
+\titlespacing*{\subsection}{0pt}{0.8cm}{0.4cm}
+
+\titleformat{\subsubsection}
+    {\normalfontsize\bfseries}
+    {\thesubsubsection}
+    {0.75em}
+    {}
+
+\titlespacing*{\subsubsection}{0pt}{0.6cm}{0.25cm}
+
+% =========================================================
+% FORMAT DAFTAR ISI, GAMBAR, DAN TABEL
+% =========================================================
+\renewcommand{\cfttoctitlefont}{\hfill\headingfont\bfseries}
+\renewcommand{\cftaftertoctitle}{\hfill\null}
+\renewcommand{\cftloftitlefont}{\hfill\headingfont\bfseries}
+\renewcommand{\cftafterloftitle}{\hfill\null}
+\renewcommand{\cftlottitlefont}{\hfill\headingfont\bfseries}
+\renewcommand{\cftafterlottitle}{\hfill\null}
+
+\setlength{\cftbeforetoctitleskip}{0pt}
+\setlength{\cftaftertoctitleskip}{1cm}
+\setlength{\cftbeforeloftitleskip}{0pt}
+\setlength{\cftafterloftitleskip}{1cm}
+\setlength{\cftbeforelottitleskip}{0pt}
+\setlength{\cftafterlottitleskip}{1cm}
+
+\renewcommand{\cftsecpresnum}{BAB~}
+\setlength{\cftsecnumwidth}{4.3em}
+\setlength{\cftsecindent}{0pt}
+
+\setlength{\cftsubsecindent}{1.2cm}
+\setlength{\cftsubsecnumwidth}{1.3cm}
+
+\setlength{\cftsubsubsecindent}{2.4cm}
+\setlength{\cftsubsubsecnumwidth}{1.7cm}
+
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsubsecleader}{\cftdotfill{\cftdotsep}}
+
+\setlength{\cftbeforesecskip}{0.25cm}
+\setlength{\cftbeforesubsecskip}{0pt}
+\setlength{\cftbeforesubsubsecskip}{0pt}
+
+\renewcommand{\cftsecfont}{\normalfont\normalfontsize}
+\renewcommand{\cftsecpagefont}{\normalfont\normalfontsize}
+\renewcommand{\cftsubsecfont}{\normalfont\normalfontsize}
+\renewcommand{\cftsubsecpagefont}{\normalfont\normalfontsize}
+\renewcommand{\cftsubsubsecfont}{\normalfont\normalfontsize}
+\renewcommand{\cftsubsubsecpagefont}{\normalfont\normalfontsize}
+
+\renewcommand{\cftfigfont}{\normalfont\normalfontsize}
+\renewcommand{\cftfigpagefont}{\normalfont\normalfontsize}
+
+\renewcommand{\cfttabfont}{\normalfont\normalfontsize}
+\renewcommand{\cfttabpagefont}{\normalfont\normalfontsize}
+
+% =========================================================
+% AWAL DOKUMEN
+% =========================================================
+\begin{document}
+
+\normalfontsize
+\justifying
+
+% =========================================================
+% HALAMAN JUDUL / COVER
+% =========================================================
+\begin{titlepage}
+
+    \thispagestyle{empty}
+    \centering
+    \setlength{\parindent}{0pt}
+
+    {
+        \headingfont
+        \bfseries
+        \addfontfeatures{LetterSpace=-3}
+
+        \makebox[\textwidth][c]{%
+            PENGEMBANGAN PASAR DIGITAL SEBAGAI MEDIA PROMOSI
+        }\\[0.15cm]
+
+        \makebox[\textwidth][c]{%
+            PRODUK LOKAL BERBASIS WEB
+        }\\[0.15cm]
+
+        \makebox[\textwidth][c]{%
+            DI PEKON SINAR MULYO
+        }
+
+        \par
+    }
+
+    \normalfontsize
+
+    \vspace{2cm}
+
+    {
+        \bfseries
+        PRAKTEK KERJA PENGABDIAN MASYARAKAT
+        \par
+    }
+
+    \vspace{1.7cm}
+
+    \IfFileExists{gambar/logo.png}
+        {
+            \includegraphics[width=5cm]{gambar/logo.png}
+        }
+        {
+            \fbox{
+                \parbox[c][5cm][c]{5cm}{
+                    \centering
+                    File logo.png\\
+                    belum diunggah
+                }
+            }
+        }
+
+    \vspace{1.8cm}
+
+    {
+        \bfseries
+        Disusun Oleh:
+        \par
+    }
+
+    \vspace{0.4cm}
+
+    {
+        \bfseries
+
+        \begin{tabular}{c@{\hspace{2cm}}c}
+            Gerald Alpheratz Hussein & 2311010054
+        \end{tabular}
+
+        \par
+    }
+
+    \vfill
+
+    {
+        \bfseries
+        FAKULTAS ILMU KOMPUTER\\
+        PROGRAM STUDI TEKNIK INFORMATIKA\\
+        INSTITUT INFORMATIKA DAN BISNIS DARMAJAYA\\
+        BANDAR LAMPUNG\\
+        2026
+        \par
+    }
+
+\end{titlepage}
+
+% =========================================================
+% HALAMAN PENGESAHAN
+% =========================================================
+\clearpage
+
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+\thispagestyle{empty}
+\setlength{\parindent}{0pt}
+
+\phantomsection
+\addcontentsline{toc}{section}{HALAMAN PENGESAHAN}
+
+\begin{center}
+
+    {
+        \headingfont
+        \bfseries
+        HALAMAN PENGESAHAN
+        \par
+    }
+
+    \normalfontsize
+
+    \vspace{0.45cm}
+
+    {
+        \bfseries
+        LAPORAN
+        \par
+    }
+
+    \vspace{0.15cm}
+
+    {
+        \bfseries
+        PRAKTEK KERJA PENGABDIAN MASYARAKAT (PKPM)
+        \par
+    }
+
+    \vspace{0.75cm}
+
+    \begin{minipage}{0.95\textwidth}
+
+        \centering
+        \bfseries
+
+        PENGEMBANGAN PASAR DIGITAL SEBAGAI MEDIA PROMOSI\\
+        PRODUK LOKAL BERBASIS WEB\\
+        DI PEKON SINAR MULYO
+
+    \end{minipage}
+
+    \vspace{0.8cm}
+
+    {
+        \bfseries
+        Oleh:
+        \par
+    }
+
+    \vspace{0.4cm}
+
+    {
+        \bfseries
+
+        \begin{tabular}{c@{\hspace{2.5cm}}c}
+            Gerald Alpheratz Hussein & 2311010054
+        \end{tabular}
+
+        \par
+    }
+
+\end{center}
+
+\vspace{1.1cm}
+
+\begin{center}
+    Telah memenuhi syarat untuk diterima.\\
+    Menyetujui,
+\end{center}
+
+\vspace{0.7cm}
+
+\noindent
+\begin{tabularx}{\textwidth}{
+    @{}
+    >{\centering\arraybackslash}X
+    >{\centering\arraybackslash}X
+    @{}
+}
+
+    \textbf{Dosen Pembimbing}
+    &
+    \textbf{Pembimbing Lapangan}
+    \\[2.4cm]
+
+    \textbf{Lilla Rahmawati, S.Sos., M.M.}
+    &
+    \textbf{\placeholder{Nama Pembimbing Lapangan}}
+    \\[0.15cm]
+
+    NIK: \makebox[3.2cm][l]{1270213}
+    &
+    NIK: \makebox[3.2cm][l]{\dotfill}
+
+\end{tabularx}
+
+\vspace{1.4cm}
+
+\begin{center}
+
+    \textbf{Ketua Jurusan Teknik Informatika}
+
+    \vspace{2.4cm}
+
+    \textbf{Hary Sabita, S.T., M.T.I.}\\[0.15cm]
+
+    NIK: \makebox[3.2cm][l]{\dotfill}
+
+\end{center}
+
+% =========================================================
+% BAGIAN AWAL LAPORAN
+% =========================================================
+\clearpage
+
+\pagestyle{plain}
+\setlength{\parindent}{1.25cm}
+
+% =========================================================
+% DAFTAR ISI
+% =========================================================
+\phantomsection
+\addcontentsline{toc}{section}{DAFTAR ISI}
+\tableofcontents
+
+% =========================================================
+% DAFTAR GAMBAR
+% =========================================================
+\clearpage
+
+\phantomsection
+\addcontentsline{toc}{section}{DAFTAR GAMBAR}
+\listoffigures
+
+% =========================================================
+% DAFTAR TABEL
+% =========================================================
+\clearpage
+
+\phantomsection
+\addcontentsline{toc}{section}{DAFTAR TABEL}
+\listoftables
+
+% =========================================================
+% KATA PENGANTAR
+% =========================================================
+\clearpage
+
+\phantomsection
+\addcontentsline{toc}{section}{KATA PENGANTAR}
+
+\begin{center}
+    {
+        \headingfont
+        \bfseries
+        KATA PENGANTAR
+    }
+\end{center}
+
+\vspace{1cm}
+
+Puji syukur penulis panjatkan ke hadirat Tuhan Yang Maha Esa atas
+segala rahmat, karunia, dan petunjuk-Nya sehingga penulis dapat
+menyelesaikan kegiatan serta menyusun Laporan Praktek Kerja
+Pengabdian Masyarakat (PKPM) yang berjudul
+\textbf{``Pengembangan Pasar Digital sebagai Media Promosi Produk
+Lokal Berbasis Web di Pekon Sinar Mulyo''} dengan baik.
+
+Laporan ini disusun sebagai bentuk pertanggungjawaban atas
+pelaksanaan kegiatan PKPM sekaligus sebagai salah satu persyaratan
+akademik di Institut Informatika dan Bisnis Darmajaya. Kegiatan
+PKPM menjadi sarana bagi penulis untuk menerapkan ilmu pengetahuan
+dan keterampilan yang telah diperoleh selama perkuliahan secara
+langsung di tengah masyarakat.
+
+Program pengembangan pasar digital Pekon Sinar Mulyo dilaksanakan
+sebagai upaya mendukung pelaku Usaha Mikro, Kecil, dan Menengah
+(UMKM) dalam memasarkan produk lokal secara lebih luas. Melalui
+portal tersebut, informasi mengenai produk, harga, kategori, dan
+lokasi usaha diharapkan dapat disampaikan secara lebih mudah, cepat,
+dan terpercaya kepada calon pembeli.
+
+Dalam pelaksanaan kegiatan dan penyusunan laporan ini, penulis
+memperoleh bantuan, bimbingan, dukungan, dan kerja sama dari
+berbagai pihak. Oleh karena itu, penulis menyampaikan terima kasih
+kepada:
+
+\begin{enumerate}[
+    leftmargin=1.25cm,
+    label=\arabic*.,
+    itemsep=0pt,
+    topsep=0.2cm
+]
+
+    \item Institut Informatika dan Bisnis Darmajaya yang telah
+    memberikan kesempatan kepada penulis untuk melaksanakan
+    kegiatan PKPM.
+
+    \item \placeholder{Nama Ketua Jurusan} selaku Ketua Jurusan
+    Teknik Informatika Institut Informatika dan Bisnis Darmajaya
+    yang telah memberikan arahan dan dukungan dalam pelaksanaan
+    kegiatan PKPM.
+
+    \item \placeholder{Nama Dosen Pembimbing Lapangan} selaku Dosen
+    Pembimbing Lapangan (DPL) yang telah memberikan bimbingan,
+    arahan, dan masukan selama pelaksanaan kegiatan hingga
+    penyusunan laporan ini.
+
+    \item Kepala Pekon Sinar Mulyo beserta seluruh perangkat pekon
+    yang telah memberikan izin, bantuan, informasi, dan dukungan
+    selama pelaksanaan kegiatan PKPM.
+
+    \item Para pelaku UMKM dan masyarakat Pekon Sinar Mulyo yang
+    telah menerima, membantu, dan berpartisipasi dalam pelaksanaan
+    kegiatan.
+
+    \item Orang tua dan keluarga yang senantiasa memberikan doa,
+    dukungan, serta motivasi kepada penulis.
+
+    \item Rekan-rekan peserta PKPM yang telah bekerja sama dan
+    saling membantu selama kegiatan berlangsung.
+
+\end{enumerate}
+
+Penulis menyadari bahwa laporan ini masih memiliki kekurangan,
+baik dari segi penyusunan maupun isi. Oleh karena itu, penulis
+mengharapkan kritik dan saran yang membangun sebagai bahan
+perbaikan pada masa yang akan datang.
+
+Penulis berharap laporan ini dapat memberikan manfaat bagi
+Institut Informatika dan Bisnis Darmajaya, Pemerintah Pekon
+Sinar Mulyo, para pelaku UMKM, serta pihak lain yang membutuhkan.
+Semoga pasar digital yang dikembangkan dapat digunakan dan
+dikembangkan secara berkelanjutan sebagai media promosi produk
+lokal Pekon Sinar Mulyo.
+
+\vspace{1.5cm}
+
+\begin{flushright}
+
+    Bandar Lampung,
+    \makebox[3cm]{\dotfill}
+    2026
+    \\[1.8cm]
+
+    \textbf{Gerald Alpheratz Hussein}
+
+\end{flushright}
+
+% =========================================================
+% HALAMAN INTI
+% =========================================================
+\clearpage
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\setlength{\parindent}{1.25cm}
+
+% =========================================================
+% BAB I PENDAHULUAN
+% =========================================================
+\section{PENDAHULUAN}
+
+\subsection{Latar Belakang}
+
+Perekonomian desa sangat ditopang oleh aktivitas para pelaku Usaha
+Mikro, Kecil, dan Menengah (UMKM). Di Pekon Sinar Mulyo terdapat
+berbagai pelaku UMKM yang memproduksi produk lokal, antara lain
+olahan makanan khas, hasil pertanian, kerajinan tangan, dan berbagai
+jasa layanan. Produk-produk tersebut sebenarnya memiliki potensi dan
+kualitas yang tidak kalah dengan produk dari daerah lain.
+
+Namun, kondisi pemasaran produk lokal di Pekon Sinar Mulyo masih
+dilakukan secara tradisional. Sebagian besar penjualan mengandalkan
+pembeli yang datang langsung ke tempat usaha, atau promosi dari
+mulut ke mulut yang jangkauannya sangat terbatas. Informasi produk
+seperti harga, kontak penjual, dan lokasi tidak terdokumentasi
+dengan baik. Akibatnya, produk lokal masih kesulitan bersaing dan
+jangkauan pasarnya sempit.
+
+Belum tersedianya media promosi yang terpusat juga menyebabkan
+informasi mengenai produk UMKM Pekon Sinar Mulyo sulit ditemukan
+oleh calon pembeli di luar wilayah pekon. Pembeli masih harus
+memperoleh informasi produk secara langsung dari pelaku usaha atau
+melalui komunikasi dari mulut ke mulut. Oleh karena itu, diperlukan
+media resmi yang dapat menyajikan informasi produk secara
+terstruktur, mudah dicari, dan dapat diakses kapan saja.
+
+Salah satu solusi yang dapat diterapkan adalah mengembangkan portal
+pasar digital berbasis web. Portal tersebut dapat digunakan untuk
+menampilkan produk lokal, kategori produk, pencarian produk, harga,
+lokasi usaha, hingga mekanisme verifikasi produk agar informasi yang
+tampil kepada publik lebih terpercaya. Keberadaan portal diharapkan
+dapat membantu pelaku UMKM memasarkan produk secara digital sekaligus
+mempermudah pembeli menemukan produk yang dibutuhkan.
+
+Portal yang dikembangkan tidak hanya menyediakan halaman produk
+untuk pengunjung publik, tetapi juga dilengkapi sistem pengelolaan
+dengan tiga peran pengguna, yaitu super admin, admin, dan pengguna
+UMKM. Sistem tersebut memungkinkan pelaku UMKM memasukkan produk
+secara mandiri, sedangkan admin bertugas memverifikasi produk
+sebelum tampil kepada publik. Dengan demikian, pengelolaan produk
+dapat dilakukan secara berkelanjutan dengan tetap menjaga kualitas
+informasi yang disajikan.
+
+\Needspace{7\baselineskip}
+
+Melalui kegiatan Praktek Kerja Pengabdian Masyarakat (PKPM), penulis
+menerapkan pengetahuan dan keterampilan di bidang teknologi
+informasi dengan mengembangkan portal pasar digital bagi pelaku UMKM
+Pekon Sinar Mulyo. Program ini diharapkan dapat mendukung
+digitalisasi pemasaran, memperluas jangkauan produk lokal, serta
+meningkatkan perekonomian masyarakat pekon.
+
+\Needspace{8\baselineskip}
+
+\subsubsection{Profil Pekon}
+
+Pekon Sinar Mulyo merupakan salah satu pekon yang berada di
+Kecamatan Pulau Panggung, Kabupaten Tanggamus, Provinsi Lampung.
+Keberadaan Pekon Sinar Mulyo sebagai wilayah administrasi di
+Kecamatan Pulau Panggung juga tercatat pada portal Kampung Keluarga
+Berkualitas milik Kementerian Kependudukan dan Pembangunan Keluarga.
+Secara administratif, Pekon Sinar Mulyo terbagi menjadi 2 dusun atau
+Rukun Warga dan 6 Rukun Tetangga.
+
+\reportfigure{gambar/pekon.png}
+    {Dokumentasi Pekon Sinar Mulyo}
+    {fig:profil-pekon-sinar-mulyo}
+
+Berdasarkan data tahun 2024 yang diterbitkan oleh Badan Pusat
+Statistik Kabupaten Tanggamus, Pekon Sinar Mulyo memiliki luas
+wilayah 0,44 km\textsuperscript{2}. Jumlah penduduknya tercatat
+sebanyak 1.048 jiwa yang terdiri atas 530 penduduk laki-laki dan
+518 penduduk perempuan. Kepadatan penduduknya mencapai 2.381,82
+jiwa per km\textsuperscript{2}. Pekon ini berjarak sekitar 5 km dari
+ibu kota Kecamatan Pulau Panggung dan sekitar 23 km dari ibu kota
+Kabupaten Tanggamus.
+
+Kepadatan penduduk yang relatif tinggi dibandingkan dengan luas
+wilayahnya menunjukkan besarnya jumlah rumah tangga yang berpotensi
+menjalankan usaha mikro, kecil, dan menengah. Kondisi tersebut
+memperkuat perlunya media promosi yang dapat menjangkau pembeli
+di luar wilayah pekon, sehingga produk UMKM tidak hanya dipasarkan
+secara terbatas di sekitar tempat tinggal pelaku usaha.
+
+\noindent\textit{Sumber: Badan Pusat Statistik Kabupaten Tanggamus,
+Kecamatan Pulau Panggung Dalam Angka 2025; serta Portal Kampung
+Keluarga Berkualitas Kementerian Kependudukan dan Pembangunan
+Keluarga.}
+
+\Needspace{7\baselineskip}
+
+\subsubsection{Potensi Ekonomi dan UMKM}
+
+Potensi ekonomi Pekon Sinar Mulyo dapat dikembangkan lebih jauh
+melalui penguatan pemasaran produk UMKM yang telah ada di wilayah
+tersebut. Berdasarkan kondisi kelembagaan ekonomi dan jenis usaha
+yang dijalankan masyarakat, potensi yang dapat dikembangkan melalui
+pasar digital adalah sebagai berikut:
+
+\begin{enumerate}[
+    leftmargin=1.25cm,
+    label=\arabic*.,
+    itemsep=0pt,
+    topsep=0.2cm
+]
+
+    \item \textbf{Produk olahan makanan}
+
+    Pelaku UMKM memproduksi berbagai olahan makanan khas yang dapat
+    dipasarkan lebih luas melalui kategori Makanan pada portal pasar
+    digital.
+
+    \item \textbf{Hasil pertanian}
+
+    Kecamatan Pulau Panggung merupakan wilayah dengan aktivitas
+    pertanian dan perkebunan, sehingga hasil pertanian pekon dapat
+    dipromosikan melalui kategori Pertanian pada portal.
+
+    \item \textbf{Kerajinan tangan}
+
+    Produk kerajinan tangan hasil karya masyarakat dapat
+    didokumentasikan dan dipasarkan melalui kategori Kerajinan.
+
+    \item \textbf{Jasa layanan}
+
+    Berbagai jasa layanan yang ditawarkan pelaku usaha lokal juga
+    dapat dipromosikan melalui kategori Jasa pada portal, sehingga
+    memperluas pilihan bagi calon pengguna layanan.
+
+    \item \textbf{Konektivitas digital}
+
+    Pekon Sinar Mulyo telah terjangkau jaringan 4G/LTE yang cukup
+    kuat, sehingga mendukung penerapan pasar digital sebagai media
+    promosi yang dapat diakses masyarakat maupun pembeli dari luar
+    wilayah pekon.
+
+\end{enumerate}
+
+\noindent\textit{Sumber: Badan Pusat Statistik Kabupaten Tanggamus,
+Kecamatan Pulau Panggung Dalam Angka 2025.}
+
+\Needspace{8\baselineskip}
+
+\subsection{Rumusan Masalah}
+
+Berdasarkan latar belakang yang telah diuraikan, rumusan masalah
+dalam pelaksanaan program ini adalah sebagai berikut:
+
+\begin{enumerate}[
+    leftmargin=1.25cm,
+    label=\arabic*.,
+    itemsep=0pt,
+    topsep=0.2cm
+]
+
+    \item Bagaimana kondisi pemasaran produk lokal di Pekon Sinar
+    Mulyo saat ini?
+
+    \item Bagaimana merancang dan mengembangkan portal pasar digital
+    berbasis web yang sesuai untuk mendukung pemasaran produk lokal?
+
+    \item Bagaimana membangun sistem pengelolaan produk dengan
+    mekanisme verifikasi agar informasi yang tampil kepada publik
+    lebih terpercaya?
+
+    \item Bagaimana implementasi dan dampak penerapan pasar digital
+    terhadap pelaku UMKM dan masyarakat Pekon Sinar Mulyo?
+
+\end{enumerate}
+
+\Needspace{12\baselineskip}
+
+\subsection{Tujuan}
+
+Tujuan pelaksanaan program pengembangan pasar digital Pekon Sinar
+Mulyo adalah sebagai berikut:
+
+\begin{enumerate}[
+    leftmargin=1.25cm,
+    label=\arabic*.,
+    itemsep=0pt,
+    topsep=0.2cm
+]
+
+    \item Mengembangkan media promosi produk lokal berbasis web di
+    Pekon Sinar Mulyo.
+
+    \item Membantu pelaku UMKM memasarkan produk secara digital serta
+    mempermudah pengelolaan data produk.
+
+    \item Menyediakan sistem verifikasi produk dengan tiga peran
+    pengguna, yaitu super admin, admin, dan pengguna UMKM, agar
+    informasi produk yang tampil lebih terpercaya.
+
+    \item Menerapkan pengetahuan dan keterampilan mahasiswa di bidang
+    teknologi informasi melalui pelaksanaan kegiatan PKPM.
+
+\end{enumerate}
+
+\Needspace{12\baselineskip}
+
+\subsection{Manfaat}
+
+Manfaat yang diharapkan dari pelaksanaan program pengembangan pasar
+digital Pekon Sinar Mulyo adalah sebagai berikut:
+
+\begin{enumerate}[
+    leftmargin=1.25cm,
+    label=\alph*.,
+    itemsep=0pt,
+    topsep=0.2cm
+]
+
+    \item \textbf{Bagi Mitra (Pelaku UMKM dan Pemerintah Pekon)}
+
+    Portal mempermudah promosi dan penjualan produk lokal sehingga
+    jangkauan pasar lebih luas, sekaligus membantu perangkat pekon
+    memfasilitasi pemasaran produk masyarakat.
+
+    \item \textbf{Bagi Masyarakat}
+
+    Masyarakat dan calon pembeli memperoleh kemudahan dalam mencari
+    dan menemukan produk lokal Pekon Sinar Mulyo secara daring.
+
+    \item \textbf{Bagi Mahasiswa}
+
+    Program ini menjadi sarana untuk menerapkan ilmu yang dipelajari
+    pada kondisi nyata di masyarakat, khususnya dalam perancangan dan
+    pengembangan aplikasi web.
+
+    \item \textbf{Bagi Institut Informatika dan Bisnis Darmajaya}
+
+    Pelaksanaan program menjadi bentuk implementasi Tri Dharma
+    Perguruan Tinggi melalui pengabdian kepada masyarakat.
+
+\end{enumerate}
+
+\Needspace{12\baselineskip}
+
+\subsection{Teknologi yang Digunakan}
+
+Pengembangan portal pasar digital Pekon Sinar Mulyo menggunakan
+beberapa teknologi yang dipilih berdasarkan kebutuhan antarmuka
+publik, pengelolaan produk, autentikasi peran pengguna, dan
+penyimpanan data. Teknologi yang digunakan disajikan pada
+Tabel~\ref{tab:teknologi-yang-digunakan}.
+
+{
+    \renewcommand{\arraystretch}{1.25}
+
+    \begin{longtable}{
+        |>{\raggedright\arraybackslash}p{2.7cm}
+        |>{\raggedright\arraybackslash}p{3.8cm}
+        |>{\raggedright\setlength{\parindent}{0pt}\arraybackslash}p{5.9cm}|
+    }
+
+        \caption{Teknologi yang digunakan dalam pengembangan portal}
+        \label{tab:teknologi-yang-digunakan}\\
+
+        \hline
+        \textbf{Kategori}
+        &
+        \textbf{Teknologi}
+        &
+        \textbf{Kegunaan}
+        \\
+        \hline
+
+        \endfirsthead
+
+        \multicolumn{3}{c}{
+            \tablename\ \thetable\ (lanjutan)
+        }
+        \\
+
+        \hline
+        \textbf{Kategori}
+        &
+        \textbf{Teknologi}
+        &
+        \textbf{Kegunaan}
+        \\
+        \hline
+
+        \endhead
+
+        \hline
+        \multicolumn{3}{r}{
+            Dilanjutkan pada halaman berikutnya
+        }
+        \\
+        \endfoot
+
+        \hline
+        \endlastfoot
+
+        Aplikasi web
+        &
+        React dan Vite
+        &
+        Digunakan untuk membangun halaman publik, halaman
+        administrasi, komponen antarmuka, dan logika aplikasi
+        portal pasar digital.
+        \\
+        \hline
+
+        Basis data dan autentikasi
+        &
+        Supabase Auth, PostgreSQL, dan Supabase Storage
+        &
+        Digunakan untuk autentikasi tiga peran pengguna (super
+        admin, admin, dan UMKM), penyimpanan data produk, serta
+        penyimpanan gambar produk.
+        \\
+        \hline
+
+        Pengelolaan hak akses
+        &
+        \textit{Row Level Security} (RLS)
+        &
+        Digunakan untuk membatasi akses data sesuai peran pengguna,
+        sehingga pengguna UMKM hanya dapat mengelola produk miliknya
+        sendiri sebelum diverifikasi admin.
+        \\
+        \hline
+
+        Target publikasi
+        &
+        \placeholder{Nama layanan hosting}
+        &
+        Digunakan sebagai target publikasi aplikasi setelah
+        konfigurasi, basis data, dan pemeriksaan akhir dinyatakan
+        siap.
+        \\
+
+    \end{longtable}
+}
+
+Kombinasi teknologi tersebut mendukung pengembangan portal yang
+responsif, terstruktur, dan mudah dikelola. Pemisahan akses antara
+super admin, admin, dan pengguna UMKM diterapkan agar hanya produk
+yang telah terverifikasi yang tampil kepada publik.
+
+\Needspace{12\baselineskip}
+
+\subsection{Mitra yang Terlibat}
+
+Mitra yang terlibat dalam pelaksanaan program ini adalah pemerintah
+Pekon Sinar Mulyo dan para pelaku UMKM setempat. Perangkat pekon
+berperan sebagai fasilitator dan pemberi izin kegiatan, sedangkan
+para pelaku UMKM berperan sebagai penyedia produk yang dipromosikan
+serta calon pengguna sistem. Kerja sama ini menjadi dasar penting
+dalam keberhasilan program pengembangan pasar digital.
+
+% =========================================================
+% BAB II PELAKSANAAN PROGRAM
+% =========================================================
+\clearpage
+
+\section{PELAKSANAAN PROGRAM}
+
+\subsection{Program-Program yang Dilaksanakan}
+
+Program yang dilaksanakan dalam kegiatan Praktek Kerja Pengabdian
+Masyarakat (PKPM) di Pekon Sinar Mulyo merupakan penerapan ilmu dan
+keterampilan mahasiswa di bidang teknologi informasi. Program
+disusun berdasarkan kebutuhan akan media promosi produk lokal yang
+dapat mempertemukan pelaku UMKM dengan pembeli secara lebih luas.
+
+Program utama yang dilaksanakan adalah pengembangan portal pasar
+digital berbasis web beserta sistem verifikasi produk. Portal tidak
+hanya dirancang sebagai halaman produk untuk pengunjung publik,
+tetapi juga dilengkapi dashboard pengelolaan agar produk dapat
+diperbarui secara mandiri oleh pelaku UMKM sebelum diverifikasi
+admin. Uraian program yang dilaksanakan disajikan pada
+Tabel~\ref{tab:program-yang-dilaksanakan}.
+
+\Needspace{7\baselineskip}
+
+\subsubsection{Program Kerja Utama}
+
+Program kerja utama dalam kegiatan ini adalah pengembangan portal
+pasar digital sebagai media promosi produk lokal berbasis web di
+Pekon Sinar Mulyo.
+
+{
+    \renewcommand{\arraystretch}{1.2}
+
+    \begin{longtable}{
+        |>{\centering\setlength{\parindent}{0pt}\arraybackslash}p{0.7cm}
+        |>{\raggedright\setlength{\parindent}{0pt}\arraybackslash}p{2.7cm}
+        |>{\raggedright\setlength{\parindent}{0pt}\arraybackslash}p{5.7cm}
+        |>{\raggedright\setlength{\parindent}{0pt}\arraybackslash}p{2.4cm}|
+    }
+
+        \caption{Program pengembangan pasar digital Pekon Sinar Mulyo}
+        \label{tab:program-yang-dilaksanakan}\\
+
+        \hline
+        \textbf{No.}
+        &
+        \textbf{Kegiatan}
+        &
+        \textbf{Uraian}
+        &
+        \textbf{Sasaran}
+        \\
+        \hline
+
+        \endfirsthead
+
+        \multicolumn{4}{c}{
+            \tablename\ \thetable\ (lanjutan)
+        }
+        \\
+
+        \hline
+        \textbf{No.}
+        &
+        \textbf{Kegiatan}
+        &
+        \textbf{Uraian}
+        &
+        \textbf{Sasaran}
+        \\
+        \hline
+
+        \endhead
+
+        \hline
+        \multicolumn{4}{r}{Dilanjutkan pada halaman berikutnya}
+        \\
+        \endfoot
+
+        \hline
+        \endlastfoot
+
+        1
+        &
+        Survei dan analisis kebutuhan
+        &
+        Melakukan survei lokasi serta analisis kebutuhan mitra untuk
+        mengetahui produk lokal yang ada beserta kendala pemasarannya.
+        &
+        Pemerintah pekon dan pelaku UMKM.
+        \\
+        \hline
+
+        2
+        &
+        Perancangan sistem
+        &
+        Menyusun struktur data, alur pengguna, pembagian tiga peran
+        (super admin, admin, UMKM), serta rancangan tampilan
+        antarmuka portal.
+        &
+        Super admin, admin, dan pengguna UMKM.
+        \\
+        \hline
+
+        3
+        &
+        Pembangunan sistem
+        &
+        Membangun portal pasar digital menggunakan React dan Vite
+        dengan \textit{backend} Supabase, meliputi halaman produk,
+        kategori, pencarian, form tambah produk, dan dashboard
+        verifikasi.
+        &
+        Pelaku UMKM dan pengunjung portal.
+        \\
+        \hline
+
+        4
+        &
+        Pelatihan penggunaan sistem
+        &
+        Memberikan pelatihan kepada mitra agar dapat memasukkan dan
+        mengelola produk secara mandiri melalui portal.
+        &
+        Pelaku UMKM.
+        \\
+        \hline
+
+        5
+        &
+        Evaluasi dan penyempurnaan
+        &
+        Melakukan evaluasi kegiatan serta penyempurnaan sistem
+        berdasarkan masukan mitra selama masa uji coba.
+        &
+        Pemerintah pekon dan pelaku UMKM.
+        \\
+
+    \end{longtable}
+}
+
+\Needspace{8\baselineskip}
+
+\subsubsection{Program Kerja Tambahan}
+
+\placeholder{
+    Isi kegiatan tambahan jika ada, misalnya sosialisasi penggunaan
+    portal kepada pelaku UMKM, gotong royong, atau kegiatan
+    pendukung lain di luar pengembangan sistem inti.
+}
+
+\Needspace{8\baselineskip}
+
+\subsubsection{Tahapan Pelaksanaan Program}
+
+Pelaksanaan program pengembangan portal dilakukan melalui beberapa
+tahap yang saling berkaitan. Tahap pertama berupa survei dan
+identifikasi kebutuhan untuk menentukan produk serta kategori yang
+perlu disediakan. Tahap berikutnya meliputi perancangan struktur
+data, alur verifikasi, dan antarmuka portal. Setelah rancangan
+disusun, pengembangan dilanjutkan pada halaman publik dan sistem
+pengelolaan produk.
+
+Tahap akhir meliputi pelatihan penggunaan sistem kepada pelaku UMKM,
+pengujian fungsi verifikasi, serta penyempurnaan berdasarkan masukan
+mitra. Tahapan tersebut dilakukan agar portal tidak hanya dapat
+menampilkan produk, tetapi juga dapat dikelola secara mandiri dan
+berkelanjutan oleh pelaku UMKM.
+
+\subsection{Waktu Kegiatan}
+
+Pelaksanaan kegiatan berlangsung selama periode pelaksanaan PKPM.
+Jadwal kegiatan dirinci dalam Tabel~\ref{tab:waktu-pelaksanaan-bab-dua}.
+
+{
+    \renewcommand{\arraystretch}{1.2}
+
+    \begin{longtable}{
+        |>{\centering\setlength{\parindent}{0pt}\arraybackslash}p{0.8cm}
+        |>{\raggedright\setlength{\parindent}{0pt}\arraybackslash}p{3cm}
+        |>{\raggedright\setlength{\parindent}{0pt}\arraybackslash}p{7.4cm}|
+    }
+
+        \caption{Rangkaian waktu pelaksanaan kegiatan}
+        \label{tab:waktu-pelaksanaan-bab-dua}\\
+
+        \hline
+        \textbf{No.}
+        &
+        \textbf{Tanggal}
+        &
+        \textbf{Kegiatan}
+        \\
+        \hline
+
+        \endfirsthead
+
+        \multicolumn{3}{c}{
+            \tablename\ \thetable\ (lanjutan)
+        }
+        \\
+
+        \hline
+        \textbf{No.}
+        &
+        \textbf{Tanggal}
+        &
+        \textbf{Kegiatan}
+        \\
+        \hline
+
+        \endhead
+
+        \hline
+        \multicolumn{3}{r}{Dilanjutkan pada halaman berikutnya}
+        \\
+        \endfoot
+
+        \hline
+        \endlastfoot
+
+        1
+        &
+        \textit{23 juli 2026}
+        &
+        Survei lokasi dan analisis kebutuhan mitra.
+        \\
+        \hline
+
+        2
+        &
+        \placeholder{isi tanggal}
+        &
+        Perancangan sistem dan antarmuka portal.
+        \\
+        \hline
+
+        3
+        &
+        \placeholder{isi tanggal}
+        &
+        Pembangunan sistem portal pasar digital.
+        \\
+        \hline
+
+        4
+        &
+        \placeholder{isi tanggal}
+        &
+        Pelatihan penggunaan sistem kepada mitra.
+        \\
+        \hline
+
+        5
+        &
+        \placeholder{isi tanggal}
+        &
+        Evaluasi kegiatan dan penyempurnaan sistem.
+        \\
+
+    \end{longtable}
+}
+
+\subsection{Hasil Kegiatan dan Dokumentasi}
+
+Berdasarkan program yang telah dilaksanakan, dihasilkan sebuah
+portal pasar digital Pekon Sinar Mulyo yang dapat diakses melalui
+browser. Portal menampilkan produk unggulan yang dikelompokkan ke
+dalam kategori Makanan, Kerajinan, Pertanian, dan Jasa, serta
+dilengkapi sistem verifikasi dengan tiga peran pengguna, yaitu super
+admin, admin, dan pengguna UMKM.
+
+\Needspace{8\baselineskip}
+
+\subsubsection{Hasil Pengembangan Portal Publik}
+
+Portal publik dirancang responsif agar dapat digunakan melalui
+komputer, tablet, maupun telepon seluler. Pengunjung dapat mencari
+produk, melihat detail harga dan satuan, memesan langsung kepada
+penjual, serta membuka peta lokasi usaha.
+
+\begin{enumerate}[
+    leftmargin=1.25cm,
+    label=\arabic*.,
+    itemsep=0pt,
+    topsep=0.2cm
+]
+
+    \item \textbf{Halaman Beranda}
+
+    Halaman beranda menampilkan produk unggulan, kategori produk,
+    dan fitur pencarian sebagai pintu masuk utama bagi pengunjung
+    portal.
+
+    \reportfigure{gambar/beranda.png}
+        {Tampilan halaman beranda portal pasar digital}
+        {fig:beranda-pasar}
+
+    \item \textbf{Halaman Kategori Produk}
+
+    Produk dikelompokkan ke dalam kategori Makanan, Kerajinan,
+    Pertanian, dan Jasa agar pengunjung lebih mudah menemukan produk
+    sesuai kebutuhan.
+
+    \reportfigure{gambar/kategori.png}
+        {Tampilan halaman kategori produk}
+        {fig:kategori-produk}
+
+    \item \textbf{Halaman Detail Produk}
+
+    Setiap produk menampilkan informasi harga, satuan, deskripsi,
+    kontak penjual, dan lokasi usaha pada peta.
+
+    \reportfigure{gambar/detail.png}
+        {Tampilan halaman detail produk}
+        {fig:detail-produk}
+
+    \item \textbf{Formulir Tambah Produk}
+
+    Pengguna UMKM dapat memasukkan produk baru melalui formulir
+    tambah produk yang kemudian menunggu proses verifikasi admin
+    sebelum tampil kepada publik.
+
+    \reportfigure{gambar/tambah.png}
+        {Tampilan formulir tambah produk oleh pengguna UMKM}
+        {fig:form-tambah-produk}
+
+\end{enumerate}
+
+\Needspace{8\baselineskip}
+
+\subsubsection{Hasil Pengembangan Sistem Verifikasi dan Dashboard}
+
+Sistem dibangun dengan tiga peran pengguna agar pengelolaan produk
+berjalan terstruktur dan produk yang tampil kepada publik telah
+melalui proses verifikasi.
+
+\begin{enumerate}[
+    leftmargin=1.25cm,
+    label=\arabic*.,
+    itemsep=0pt,
+    topsep=0.2cm
+]
+
+    \item \textbf{Dashboard pengguna UMKM}
+
+    Pengguna UMKM dapat menambahkan, menyunting, dan memantau status
+    produk miliknya, baik yang masih menunggu verifikasi maupun yang
+    sudah tampil di portal.
+
+    \reportfigure{dashboard-umkm.png}
+        {Tampilan dashboard pengguna UMKM}
+        {fig:dashboard-umkm}
+
+    \item \textbf{Dashboard admin}
+
+    Admin bertugas memeriksa dan memverifikasi produk yang diajukan
+    pengguna UMKM sebelum produk tersebut tampil kepada publik.
+
+    \reportfigure{dashboard-admin-verifikasi.png}
+        {Tampilan dashboard verifikasi produk oleh admin}
+        {fig:dashboard-admin-verifikasi}
+
+    \item \textbf{Dashboard super admin}
+
+    Super admin memiliki kewenangan tertinggi, meliputi pengelolaan
+    akun admin, pemantauan seluruh data produk, dan pengaturan umum
+    portal.
+
+\end{enumerate}
+
+\Needspace{8\baselineskip}
+
+\subsubsection{Penerapan Basis Data dan Keamanan}
+
+Data portal disimpan menggunakan PostgreSQL melalui Supabase. Tabel
+utama meliputi data akun pengguna, produk, kategori, dan status
+verifikasi. Setiap tabel dilindungi menggunakan \textit{Row Level
+Security} (RLS) agar pengguna UMKM hanya dapat mengelola produk
+miliknya sendiri, sedangkan admin dan super admin memiliki
+kewenangan sesuai peran masing-masing.
+
+\subsection{Dampak Kegiatan}
+
+Program pengembangan pasar digital Pekon Sinar Mulyo memberikan
+hasil berupa fondasi media promosi produk lokal berbasis web.
+Dampak program tidak hanya berkaitan dengan tersedianya portal,
+tetapi juga dengan perubahan cara produk UMKM dipasarkan dan
+dikelola.
+
+\Needspace{7\baselineskip}
+
+\subsubsection{Dampak bagi Pelaku UMKM}
+
+Pelaku UMKM memperoleh media tertata untuk mengelola data produk,
+sehingga informasi harga, kontak, dan lokasi tersusun dalam satu
+tempat. Jangkauan pemasaran menjadi lebih luas karena produk dapat
+dikenal masyarakat di luar pekon, dan proses persuasi kepada calon
+pembeli menjadi lebih terpercaya berkat mekanisme verifikasi.
+
+\Needspace{7\baselineskip}
+
+\subsubsection{Dampak bagi Masyarakat dan Pembeli}
+
+Masyarakat dan calon pembeli memperoleh kemudahan dalam mencari
+produk lokal Pekon Sinar Mulyo tanpa harus datang langsung ke tempat
+usaha. Tampilan responsif memudahkan penggunaan portal melalui
+telepon seluler kapan saja dibutuhkan.
+
+\Needspace{7\baselineskip}
+
+\subsubsection{Dampak bagi Mahasiswa}
+
+Pelaksanaan program memberikan pengalaman kepada mahasiswa dalam
+menganalisis kebutuhan mitra, merancang sistem tiga peran pengguna,
+mengembangkan antarmuka responsif, mengelola basis data dan
+autentikasi, serta melakukan pelatihan penggunaan sistem kepada
+masyarakat.
+
+% =========================================================
+% BAB III PENUTUP
+% =========================================================
+\clearpage
+
+\section{PENUTUP}
+
+\subsection{Kesimpulan}
+
+Kegiatan PKPM ini berhasil mengembangkan portal pasar digital
+berbasis web di Pekon Sinar Mulyo sebagai media promosi produk
+lokal. Sistem tersebut mempertemukan pelaku UMKM dengan pembeli,
+memudahkan pengelolaan data produk, serta dilengkapi dengan
+mekanisme verifikasi agar informasi yang tampil lebih terpercaya.
+Melalui kegiatan ini, masyarakat setempat mendapatkan wadah digital
+untuk memperluas pemasaran produk lokal.
+
+\subsection{Saran}
+
+Beberapa saran untuk keberlanjutan program adalah sebagai berikut.
+
+\begin{enumerate}[
+    leftmargin=1.25cm,
+    label=\arabic*.,
+    itemsep=0pt,
+    topsep=0.2cm
+]
+
+    \item Bagi mitra: agar rutin memperbarui data produk dan
+    memanfaatkan sistem secara konsisten.
+
+    \item Bagi mahasiswa berikutnya: dapat menambahkan fitur
+    pembayaran dan laporan penjualan.
+
+    \item Bagi kampus: agar terus mendukung kegiatan pengabdian yang
+    berkelanjutan.
+
+\end{enumerate}
+
+\subsection{Rekomendasi}
+
+Keberlanjutan program sebaiknya dilakukan pendampingan lanjutan agar
+seluruh pelaku UMKM mahir menggunakan sistem. Dinas atau perangkat
+desa dapat mengelola data produk dan menjadikan portal sebagai media
+resmi untuk mendukung pertumbuhan ekonomi desa. Dengan demikian,
+manfaat pasar digital dapat terus dirasakan dalam jangka panjang.
+
+% =========================================================
+% DAFTAR PUSTAKA
+% =========================================================
+\clearpage
+
+\phantomsection
+\addcontentsline{toc}{section}{DAFTAR PUSTAKA}
+
+\begin{center}
+    {
+        \headingfont
+        \bfseries
+        DAFTAR PUSTAKA
+    }
+\end{center}
+
+\vspace{1cm}
+
+\begin{flushleft}
+Badan Pusat Statistik Kabupaten Tanggamus. (2025). \textit{Kecamatan
+Pulau Panggung Dalam Angka 2025}. BPS Kabupaten Tanggamus.
+
+\placeholder{Tambahkan referensi lain yang digunakan, misalnya
+jurnal, buku, atau dokumentasi teknis React/Supabase, dengan format
+Nama Penulis. (Tahun). Judul Referensi. Nama Jurnal/Penerbit.}
+\end{flushleft}
+
+% =========================================================
+% LAMPIRAN-LAMPIRAN
+% =========================================================
+\clearpage
+
+\phantomsection
+\addcontentsline{toc}{section}{LAMPIRAN-LAMPIRAN}
+
+\begin{center}
+    {
+        \headingfont
+        \bfseries
+        LAMPIRAN-LAMPIRAN
+    }
+\end{center}
+
+\vspace{1cm}
+
+\textbf{
+    Lampiran 1. Bukti Kegiatan Selama Pelaksanaan PKPM
+}
+
+\vspace{0.5cm}
+
+\placeholder{
+    Masukkan foto, dokumen, daftar hadir,
+    atau bukti kegiatan selama pelaksanaan PKPM.
+}
+
+\vspace{1cm}
+
+\textbf{
+    Lampiran 2. Bukti Pendukung Program yang Dilaksanakan
+}
+
+\vspace{0.5cm}
+
+\placeholder{
+    Masukkan bukti pendukung program,
+    misalnya tangkapan layar portal pasar digital,
+    hasil serah terima, surat,
+    atau dokumen pendukung lainnya.
+}
+
+\end{document}

@@ -1,0 +1,350 @@
+import React, { useState, useEffect } from 'react';
+import { LayoutDashboard, Package, ShieldAlert, ShieldCheck, CheckCircle2, Edit3, Trash2, PlusCircle, Search, Box, Store, Snowflake } from 'lucide-react';
+import DashboardLayout from './ui/DashboardLayout';
+import StatCard from './ui/StatCard';
+import EditProductModal from './EditProductModal';
+import { buildUmkmList } from '../lib/utils';
+
+export default function AdminDashboard({ products, categories, onVerifyProduct, onDeleteProduct, onProductUpdated, onAddProduct, onBack, currentUser, frozenUmkm = [], onToggleFreezeUmkm, onDeleteUmkm }) {
+  const [activePanel, setActivePanel] = useState('dashboard');
+  const [pendingProducts, setPendingProducts] = useState([]);
+  const [approvedProducts, setApprovedProducts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  const userName = currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'Admin';
+
+  useEffect(() => {
+    const pending = (products || []).filter(p => !p.verified);
+    const approved = (products || []).filter(p => p.verified);
+    setPendingProducts(pending);
+    setApprovedProducts(approved);
+  }, [products]);
+
+  const handleVerify = (productId, verified) => { if (onVerifyProduct) onVerifyProduct(productId, verified); };
+  const handleDelete = (productId) => { if (window.confirm('Apakah Anda yakin ingin menghapus produk ini?')) { if (onDeleteProduct) onDeleteProduct(productId); } };
+  const handleEdit = (product) => { setEditingProduct(product); setShowEditModal(true); };
+  const handleProductUpdated = (updatedProduct) => { if (onProductUpdated) onProductUpdated(updatedProduct); };
+
+  const getStatus = (p) => {
+    if (p.verified) return { label: 'Verified', color: '#059669', bg: '#ECFDF5' };
+    if (p.status === 'rejected') return { label: 'Ditolak', color: '#DC2626', bg: '#FEE2E2' };
+    return { label: 'Menunggu', color: '#D97706', bg: '#FEF3C7' };
+  };
+
+  const filteredProducts = (products || []).filter(p => {
+    const q = searchQuery.toLowerCase();
+    const title = p?.title?.toLowerCase?.() ?? '';
+    const seller = p?.sellerName?.toLowerCase?.() ?? p?.seller_name?.toLowerCase?.() ?? '';
+    const matchSearch = title.includes(q) || seller.includes(q);
+    if (filterStatus === 'pending') return (!p.verified && p.status !== 'rejected') && matchSearch;
+    if (filterStatus === 'approved') return (p.verified || p.status === 'approved') && matchSearch;
+    if (filterStatus === 'rejected') return p.status === 'rejected' && matchSearch;
+    return matchSearch;
+  });
+
+
+
+  const filteredPending = pendingProducts.filter(p => {
+    const q = searchQuery.toLowerCase();
+    const title = p?.title?.toLowerCase?.() ?? '';
+    const seller = p?.sellerName?.toLowerCase?.() ?? p?.seller_name?.toLowerCase?.() ?? '';
+    return title.includes(q) || seller.includes(q);
+  });
+
+  const sidebarItems = [
+    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { key: 'verification', label: 'Verifikasi', icon: ShieldAlert },
+    { key: 'products', label: 'Produk', icon: Package },
+    { key: 'umkm', label: 'Kelola UMKM', icon: Store },
+  ];
+
+  const umkmList = buildUmkmList(products, frozenUmkm);
+
+  const renderDashboard = () => (
+    <div>
+      <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1E293B', marginBottom: '20px' }}>
+        Selamat Datang, {userName}
+      </h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <StatCard icon={Package} label="Total Produk" value={products?.length || 0} color="#1E40AF" bg="#EFF6FF" />
+        <StatCard icon={Store} label="Total UMKM" value={umkmList.length} color="#7C3AED" bg="#F5F3FF" />
+        <StatCard icon={ShieldAlert} label="Menunggu Verifikasi" value={pendingProducts.length} color="#D97706" bg="#FEF3C7" />
+        <StatCard icon={CheckCircle2} label="Terverifikasi" value={approvedProducts.length} color="#059669" bg="#ECFDF5" />
+      </div>
+    </div>
+  );
+
+  const renderVerification = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#92400E', margin: 0 }}>
+          Produk Menunggu Verifikasi ({filteredPending.length})
+        </h3>
+        <div style={{ flex: 1, minWidth: '250px', maxWidth: '360px', position: 'relative' }}>
+          <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} size={18} />
+          <input type="text" placeholder="Cari produk pending..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px 10px 40px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+      </div>
+
+      {filteredPending.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+          <ShieldCheck size={48} style={{ color: '#CBD5E1', marginBottom: '16px' }} />
+          <p style={{ fontSize: '1.1rem', color: '#64748B' }}>Tidak ada produk yang menunggu verifikasi.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+          {filteredPending.map(product => (
+            <div key={product.id} style={{ background: 'white', border: '1px solid #FDE68A', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(15, 44, 89, 0.08)' }}>
+              <div style={{ height: '150px', background: '#F1F5F9', overflow: 'hidden' }}>
+                <img src={product.image || ''} alt={product.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div style={{ padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1E293B', margin: 0 }}>{product.title || '-'}</h4>
+                  <span style={{ background: '#FEF3C7', color: '#92400E', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>Menunggu</span>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#64748B', marginBottom: '8px' }}>Oleh: {product.sellerName || product.seller_name || '-'}</div>
+                <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '12px' }}>
+                  Kategori: {categories.find(c => c.id === product.category)?.name || product.category} • NIB: {product.nib || '-'}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => handleVerify(product.id, true)} style={{
+                    flex: 1, background: '#059669', color: 'white', border: 'none', padding: '10px', borderRadius: '8px',
+                    fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  }}>
+                    <CheckCircle2 size={16} /> Verifikasi
+                  </button>
+                  <button onClick={() => handleVerify(product.id, false)} style={{
+                    flex: 1, background: '#DC2626', color: 'white', border: 'none', padding: '10px', borderRadius: '8px',
+                    fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  }}>
+                    <ShieldAlert size={16} /> Tolak
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderProducts = () => (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
+          <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} size={18} />
+          <input type="text" placeholder="Cari produk..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px 10px 40px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {['all', 'pending', 'approved', 'rejected'].map(status => (
+            <button key={status} onClick={() => setFilterStatus(status)} style={{
+              padding: '8px 16px', border: filterStatus === status ? '2px solid #0F2C59' : '1px solid #CBD5E1',
+              borderRadius: '8px', background: filterStatus === status ? '#EFF6FF' : 'white',
+              color: filterStatus === status ? '#0F2C59' : '#64748B', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer'
+            }}>
+              {status === 'all' ? 'Semua' : status === 'pending' ? 'Menunggu' : status === 'approved' ? 'Terverifikasi' : 'Ditolak'}
+            </button>
+          ))}
+          <button onClick={onAddProduct} style={{
+            background: '#059669', color: 'white', border: 'none', padding: '10px 18px',
+            borderRadius: '8px', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}>
+            <PlusCircle size={16} /> Tambah
+          </button>
+        </div>
+      </div>
+
+      {filteredProducts.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+          <Box size={48} style={{ color: '#CBD5E1', marginBottom: '16px' }} />
+          <p style={{ fontSize: '1.1rem', color: '#64748B' }}>Tidak ada produk ditemukan.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+          {filteredProducts.map(product => {
+            const status = getStatus(product);
+            const isVerified = product.verified || product.status === 'approved';
+            const isRejected = product.status === 'rejected';
+
+            return (
+              <div key={product.id} style={{
+                background: 'white', border: isVerified ? '1px solid #E2E8F0' : isRejected ? '1px solid #FECFCA' : '1px solid #FDE68A',
+                borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(15, 44, 89, 0.08)'
+              }}>
+                <div style={{ height: '150px', background: '#F1F5F9', overflow: 'hidden' }}>
+                  <img src={product.image || ''} alt={product.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1E293B', margin: 0 }}>{product.title || '-'}</h4>
+                    <span style={{
+                      background: status.bg, color: status.color, padding: '2px 8px', borderRadius: '4px',
+                      fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '3px'
+                    }}>
+                      {product.verified && <ShieldCheck size={10} />}
+                      {status.label}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#64748B', marginBottom: '12px' }}>
+                    {product.sellerName || product.seller_name || '-'} — {categories.find(c => c.id === product.category)?.name || product.category}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+                    {!isVerified && (
+                      <button onClick={() => handleVerify(product.id, true)} style={{
+                        flex: 1, background: '#059669', color: 'white', border: 'none', padding: '8px', borderRadius: '6px',
+                        fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                      }}>
+                        <CheckCircle2 size={14} /> Verifikasi
+                      </button>
+                    )}
+                    {!isRejected && (
+                      <button onClick={() => handleVerify(product.id, false)} style={{
+                        flex: 1, background: '#DC2626', color: 'white', border: 'none', padding: '8px', borderRadius: '6px',
+                        fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                      }}>
+                        <ShieldAlert size={14} /> Tolak
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={() => handleEdit(product)} style={{
+                      flex: 1, background: '#1E40AF', color: 'white', border: 'none', padding: '8px', borderRadius: '6px',
+                      fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                    }}>
+                      <Edit3 size={14} /> Edit
+                    </button>
+                    <button onClick={() => handleDelete(product.id)} style={{
+                      flex: 1, background: 'white', border: '1px solid #E5E7EB', color: '#DC2626', padding: '8px', borderRadius: '6px',
+                      fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                    }}>
+                      <Trash2 size={14} /> Hapus
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+
+  const renderUmkm = (onDeleteUmkm) => (
+    <div>
+      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1E293B', marginBottom: '16px' }}>
+        Kelola UMKM ({umkmList.length})
+      </h3>
+      <p style={{ fontSize: '0.85rem', color: '#64748B', marginBottom: '20px' }}>
+        Bekukan UMKM yang sudah tidak aktif/melanggar aturan. Produk dari UMKM yang dibekukan tidak tampil di katalog publik.
+      </p>
+
+      {umkmList.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+          <Store size={48} style={{ color: '#CBD5E1', marginBottom: '16px' }} />
+          <p style={{ fontSize: '1.1rem', color: '#64748B' }}>Belum ada UMKM terdaftar.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '12px' }}>
+          {umkmList.map(umkm => (
+            <div key={umkm.key} style={{
+              background: 'white', border: `1px solid ${umkm.frozen ? '#FECACA' : '#E2E8F0'}`,
+              borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              boxShadow: '0 2px 8px rgba(15, 44, 89, 0.06)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                <div style={{
+                  width: '44px', height: '44px', borderRadius: '10px', flexShrink: 0,
+                  background: umkm.frozen ? '#FEE2E2' : '#EFF6FF', color: umkm.frozen ? '#DC2626' : '#1E40AF',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <Store size={20} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {umkm.name}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                    {umkm.phone || umkm.key} • {umkm.count} produk
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{
+                  padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700,
+                  background: umkm.frozen ? '#FEE2E2' : '#ECFDF5',
+                  color: umkm.frozen ? '#DC2626' : '#059669'
+                }}>
+                  {umkm.frozen ? 'Dibekukan' : 'Aktif'}
+                </span>
+                <button
+                  onClick={() => onToggleFreezeUmkm && onToggleFreezeUmkm(umkm.key)}
+                  style={{
+                    padding: '8px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+                    border: umkm.frozen ? '1px solid #059669' : '1px solid #DC2626',
+                    background: umkm.frozen ? '#ECFDF5' : 'white',
+                    color: umkm.frozen ? '#059669' : '#DC2626',
+                    display: 'flex', alignItems: 'center', gap: '6px'
+                  }}
+                >
+                  <Snowflake size={14} />
+                  {umkm.frozen ? 'Aktifkan' : 'Bekukan'}
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm('Apakah Anda yakin ingin menghapus akun UMKM ini? Semua produk terkait juga akan dihapus.')) {
+                      if (onDeleteUmkm) onDeleteUmkm(umkm.key);
+                    }
+                  }}
+                  style={{
+                    padding: '8px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+                    border: '1px solid #DC2626', background: 'white', color: '#DC2626',
+                    display: 'flex', alignItems: 'center', gap: '6px'
+                  }}
+                >
+                  <Trash2 size={14} />
+                  Hapus Akun
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <DashboardLayout
+      sidebarItems={sidebarItems}
+      activeItem={activePanel}
+      onSelectItem={setActivePanel}
+      userName={userName}
+      userRole="Admin"
+      onBack={onBack}
+      accentColor="#0F2C59"
+    >
+      {activePanel === 'dashboard' && renderDashboard()}
+      {activePanel === 'verification' && renderVerification()}
+      {activePanel === 'products' && renderProducts()}
+      {activePanel === 'umkm' && renderUmkm(onDeleteUmkm)}
+
+      {showEditModal && editingProduct && (
+        <EditProductModal
+          product={editingProduct}
+          categories={categories}
+          onClose={() => { setShowEditModal(false); setEditingProduct(null); }}
+          onProductUpdated={handleProductUpdated}
+        />
+      )}
+    </DashboardLayout>
+  );
+}
