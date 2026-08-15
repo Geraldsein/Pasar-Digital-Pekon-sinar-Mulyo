@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { QrCode, Share2, Globe, ShieldCheck, Truck, X } from "lucide-react";
+import { Share2, Globe, ShieldCheck, Truck, X } from "lucide-react";
 
 const INFO_CONTENT = {
   privasi: {
@@ -13,10 +13,6 @@ const INFO_CONTENT = {
   bantuan: {
     title: "Bantuan",
     body: "Butuh bantuan? Hubungi kami melalui:\n\n• Email: admin@umkmdesa.id\n• WhatsApp: +62 812-3456-7890\n• Jam layanan: Senin–Jumat, 08.00–16.00 WIB\n\nKami siap membantu pendaftaran akun, verifikasi produk, dan kendala teknis lainnya."
-  },
-  qr: {
-    title: "QR Code Profil Desa",
-    body: "QR Code profil desa akan memuat tautan ke katalog produk UMKM desa. Anda dapat memindainya dengan kamera HP untuk langsung membuka portal ini. Cetak QR ini untuk dipasang di balai desa, warung, dan papan informasi publik."
   },
   website: {
     title: "Website Resmi Desa",
@@ -62,9 +58,6 @@ export default function Footer({ onOpenAuth }) {
               pemberdayaan produk lokal yang berkualitas.
             </p>
             <div className="footer-socials">
-              <button className="social-btn" title="QR Code Profil" onClick={() => setInfo('qr')}>
-                <QrCode size={18} />
-              </button>
               <button className="social-btn" title="Bagikan Portal" onClick={handleShare}>
                 <Share2 size={18} />
               </button>
