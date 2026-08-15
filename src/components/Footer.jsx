@@ -12,7 +12,7 @@ const INFO_CONTENT = {
   },
   bantuan: {
     title: "Bantuan",
-    body: "Butuh bantuan? Hubungi kami melalui:\n\n• Email: admin@umkmdesa.id\n• WhatsApp: +62 812-3456-7890\n• Jam layanan: Senin–Jumat, 08.00–16.00 WIB\n\nKami siap membantu pendaftaran akun, verifikasi produk, dan kendala teknis lainnya."
+    body: "Butuh bantuan? Hubungi kami melalui:\n\n• Email: sinarmulyo95@gmail.com\n• Jam layanan: Senin–Jumat, 08.00–16.00 WIB\n\nKami siap membantu pendaftaran akun, verifikasi produk, dan kendala teknis lainnya."
   },
   website: {
     title: "Website Resmi Desa",
