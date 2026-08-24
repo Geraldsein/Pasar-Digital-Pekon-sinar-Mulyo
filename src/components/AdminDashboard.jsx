@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, ShieldAlert, ShieldCheck, CheckCircle2, Edit3, Trash2, PlusCircle, Search, Box, Store, Snowflake, Palette } from 'lucide-react';
+import { LayoutDashboard, Package, ShieldAlert, ShieldCheck, CheckCircle2, Edit3, Trash2, PlusCircle, Search, Box, Store, Snowflake, Palette, Lock, Pencil, X } from 'lucide-react';
+import ImageUploader from './ui/ImageUploader';
 import DashboardLayout from './ui/DashboardLayout';
 import StatCard from './ui/StatCard';
 import EditProductModal from './EditProductModal';
@@ -69,6 +70,8 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState('');
+  const [isEditingSettings, setIsEditingSettings] = useState(false);
+  const [originalSettingsForm, setOriginalSettingsForm] = useState(null);
 
   useEffect(() => {
     if (siteContent && Object.keys(siteContent).length > 0) {
@@ -85,6 +88,18 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
     }
   }, [siteContent]);
 
+  const handleEditSettings = () => {
+    setOriginalSettingsForm({ ...settingsForm });
+    setIsEditingSettings(true);
+    setSettingsMsg('');
+  };
+
+  const handleCancelSettings = () => {
+    if (originalSettingsForm) setSettingsForm({ ...originalSettingsForm });
+    setIsEditingSettings(false);
+    setSettingsMsg('');
+  };
+
   const handleSaveSettings = async () => {
     if (!onSaveSiteContent) return;
     setSettingsSaving(true);
@@ -92,6 +107,7 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
     try {
       await onSaveSiteContent(settingsForm);
       setSettingsMsg('Tampilan berhasil disimpan.');
+      setIsEditingSettings(false);
     } catch (e) {
       setSettingsMsg(e.message || 'Gagal menyimpan.');
     } finally {
@@ -106,103 +122,143 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
   const labelStyle = { display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: '#1E293B' };
 
   const renderSettings = () => (
-    <div style={{ maxWidth: '640px' }}>
-      <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1E293B', marginBottom: '6px' }}>Tampilan Website</h3>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '12px' }}>
+        <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1E293B', margin: 0 }}>Tampilan Website</h3>
+        {!isEditingSettings && (
+          <button onClick={handleEditSettings} style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            background: '#0F2C59', color: 'white', border: 'none', padding: '10px 20px',
+            borderRadius: '8px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer'
+          }}>
+            <Pencil size={15} /> Edit Tampilan
+          </button>
+        )}
+      </div>
       <p style={{ fontSize: '0.9rem', color: '#64748B', marginBottom: '20px' }}>
-        Ubah judul, deskripsi, dan gambar yang tampil di halaman utama portal.
+        {isEditingSettings
+          ? 'Mode edit aktif — ubah konten lalu tekan Simpan.'
+          : 'Tekan "Edit Tampilan" untuk mengubah judul, deskripsi, dan gambar portal.'}
       </p>
 
       {settingsMsg && (
         <div style={{
           background: settingsMsg.includes('Gagal') ? '#FEE2E2' : '#DCFCE7',
           color: settingsMsg.includes('Gagal') ? '#991B1B' : '#166534',
-          padding: '12px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px'
+          padding: '12px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px',
+          display: 'flex', alignItems: 'center', gap: '8px'
         }}>
-          {settingsMsg}
+          {settingsMsg.includes('Gagal') ? '❌' : '✅'} {settingsMsg}
         </div>
       )}
 
-      <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '24px' }}>
-        <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#1E293B', margin: '0 0 8px', paddingBottom: '8px', borderBottom: '1px solid #E5E7EB' }}>
-          Hero Section (Atas)
-        </h4>
-        <div style={{ marginBottom: '14px' }}>
-          <label style={labelStyle}>Judul Hero</label>
-          <input style={inputStyle} value={settingsForm.hero_title}
-            onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_title: e.target.value }))}
-            placeholder="Pasar Digital Desa" />
-        </div>
-        <div style={{ marginBottom: '20px' }}>
-          <label style={labelStyle}>Deskripsi Hero</label>
-          <textarea rows={3} style={inputStyle} value={settingsForm.hero_desc}
-            onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_desc: e.target.value }))}
-            placeholder="Dukung pertumbuhan ekonomi lokal..." />
-        </div>
-
-        <div style={{ marginBottom: '14px' }}>
-          <label style={labelStyle}>URL Gambar Hero</label>
-          <input type="url" style={inputStyle} value={settingsForm.hero_image}
-            onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_image: e.target.value }))}
-            placeholder="https://images.unsplash.com/..." />
-          {settingsForm.hero_image && (
-            <img src={settingsForm.hero_image} alt="Preview hero" onError={(e) => { e.target.style.display = 'none'; }}
-              style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px' }} />
-          )}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
-          <div>
-            <label style={labelStyle}>Badge Judul</label>
-            <input style={inputStyle} value={settingsForm.hero_badge_title}
-              onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_badge_title: e.target.value }))}
-              placeholder="150+ Pelaku UMKM" />
-          </div>
-          <div>
-            <label style={labelStyle}>Badge Sub-judul</label>
-            <input style={inputStyle} value={settingsForm.hero_badge_subtitle}
-              onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_badge_subtitle: e.target.value }))}
-              placeholder="Terverifikasi Digital" />
-          </div>
-        </div>
-
-        <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#1E293B', margin: '20px 0 8px', paddingBottom: '8px', borderBottom: '1px solid #E5E7EB' }}>
-          Banner Section
-        </h4>
-        <div style={{ marginBottom: '14px' }}>
-          <label style={labelStyle}>Judul Banner</label>
-          <input style={inputStyle} value={settingsForm.banner_title}
-            onChange={(e) => setSettingsForm(prev => ({ ...prev, banner_title: e.target.value }))}
-            placeholder="Potensi Desa Digital Kami" />
-        </div>
-        <div style={{ marginBottom: '14px' }}>
-          <label style={labelStyle}>Deskripsi Banner</label>
-          <textarea rows={3} style={inputStyle} value={settingsForm.banner_desc}
-            onChange={(e) => setSettingsForm(prev => ({ ...prev, banner_desc: e.target.value }))}
-            placeholder="Kami percaya bahwa teknologi dapat..." />
-        </div>
-        <div style={{ marginBottom: '20px' }}>
-          <label style={labelStyle}>URL Gambar Banner</label>
-          <input type="url" style={inputStyle} value={settingsForm.banner_image}
-            onChange={(e) => setSettingsForm(prev => ({ ...prev, banner_image: e.target.value }))}
-            placeholder="https://images.unsplash.com/..." />
-          {settingsForm.banner_image && (
-            <img src={settingsForm.banner_image} alt="Preview banner" onError={(e) => { e.target.style.display = 'none'; }}
-              style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px' }} />
-          )}
-        </div>
-
-        <button onClick={handleSaveSettings} disabled={settingsSaving} style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          background: '#0F2C59', color: 'white', border: 'none', padding: '12px',
-          borderRadius: '10px', fontWeight: 700, fontSize: '0.95rem',
-          cursor: settingsSaving ? 'not-allowed' : 'pointer', opacity: settingsSaving ? 0.75 : 1
+      {!isEditingSettings && (
+        <div style={{
+          background: '#FEF9C3', border: '1px solid #FDE047', borderRadius: '10px',
+          padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px',
+          fontSize: '0.82rem', color: '#854D0E', fontWeight: 500
         }}>
-          <Palette size={18} />
-          {settingsSaving ? 'Menyimpan...' : 'Simpan Tampilan'}
-        </button>
+          <Lock size={14} /> Form terkunci. Klik <strong style={{ margin: '0 3px' }}>Edit Tampilan</strong> di atas untuk mulai mengubah.
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px', alignItems: 'start' }}>
+
+        {/* --- Hero Section --- */}
+        <div style={{ background: 'white', border: `1px solid ${isEditingSettings ? '#93C5FD' : '#E2E8F0'}`, borderRadius: '12px', padding: '24px', transition: 'border-color 0.2s' }}>
+          <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#1E293B', margin: '0 0 16px', paddingBottom: '8px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            🖼 Hero Section <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748B' }}>(Banner Utama Atas)</span>
+          </h4>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>Judul Hero</label>
+            <input style={{ ...inputStyle, background: isEditingSettings ? 'white' : '#F8FAFC', color: isEditingSettings ? '#1E293B' : '#64748B' }}
+              value={settingsForm.hero_title} readOnly={!isEditingSettings}
+              onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_title: e.target.value }))}
+              placeholder="Pasar Digital Desa" />
+          </div>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>Deskripsi Hero</label>
+            <textarea rows={3} style={{ ...inputStyle, background: isEditingSettings ? 'white' : '#F8FAFC', color: isEditingSettings ? '#1E293B' : '#64748B', resize: 'vertical' }}
+              value={settingsForm.hero_desc} readOnly={!isEditingSettings}
+              onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_desc: e.target.value }))}
+              placeholder="Dukung pertumbuhan ekonomi lokal..." />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={labelStyle}>Badge Judul</label>
+              <input style={{ ...inputStyle, background: isEditingSettings ? 'white' : '#F8FAFC', color: isEditingSettings ? '#1E293B' : '#64748B' }}
+                value={settingsForm.hero_badge_title} readOnly={!isEditingSettings}
+                onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_badge_title: e.target.value }))}
+                placeholder="150+ Pelaku UMKM" />
+            </div>
+            <div>
+              <label style={labelStyle}>Badge Sub-judul</label>
+              <input style={{ ...inputStyle, background: isEditingSettings ? 'white' : '#F8FAFC', color: isEditingSettings ? '#1E293B' : '#64748B' }}
+                value={settingsForm.hero_badge_subtitle} readOnly={!isEditingSettings}
+                onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_badge_subtitle: e.target.value }))}
+                placeholder="Terverifikasi Digital" />
+            </div>
+          </div>
+          <ImageUploader
+            label="Gambar Hero"
+            value={settingsForm.hero_image}
+            onChange={(val) => setSettingsForm(prev => ({ ...prev, hero_image: val }))}
+            disabled={!isEditingSettings}
+          />
+        </div>
+
+        {/* --- Banner Section --- */}
+        <div style={{ background: 'white', border: `1px solid ${isEditingSettings ? '#93C5FD' : '#E2E8F0'}`, borderRadius: '12px', padding: '24px', transition: 'border-color 0.2s' }}>
+          <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#1E293B', margin: '0 0 16px', paddingBottom: '8px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            📢 Banner Section <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748B' }}>(Promosi Tengah)</span>
+          </h4>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>Judul Banner</label>
+            <input style={{ ...inputStyle, background: isEditingSettings ? 'white' : '#F8FAFC', color: isEditingSettings ? '#1E293B' : '#64748B' }}
+              value={settingsForm.banner_title} readOnly={!isEditingSettings}
+              onChange={(e) => setSettingsForm(prev => ({ ...prev, banner_title: e.target.value }))}
+              placeholder="Potensi Desa Digital Kami" />
+          </div>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>Deskripsi Banner</label>
+            <textarea rows={3} style={{ ...inputStyle, background: isEditingSettings ? 'white' : '#F8FAFC', color: isEditingSettings ? '#1E293B' : '#64748B', resize: 'vertical' }}
+              value={settingsForm.banner_desc} readOnly={!isEditingSettings}
+              onChange={(e) => setSettingsForm(prev => ({ ...prev, banner_desc: e.target.value }))}
+              placeholder="Kami percaya bahwa teknologi dapat..." />
+          </div>
+          <ImageUploader
+            label="Gambar Banner"
+            value={settingsForm.banner_image}
+            onChange={(val) => setSettingsForm(prev => ({ ...prev, banner_image: val }))}
+            disabled={!isEditingSettings}
+          />
+        </div>
       </div>
+
+      {/* Tombol Aksi */}
+      {isEditingSettings && (
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button onClick={handleSaveSettings} disabled={settingsSaving} style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            background: '#0F2C59', color: 'white', border: 'none', padding: '13px',
+            borderRadius: '10px', fontWeight: 700, fontSize: '0.95rem',
+            cursor: settingsSaving ? 'not-allowed' : 'pointer', opacity: settingsSaving ? 0.75 : 1
+          }}>
+            <Palette size={18} />
+            {settingsSaving ? 'Menyimpan...' : 'Simpan Tampilan'}
+          </button>
+          <button onClick={handleCancelSettings} disabled={settingsSaving} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            background: 'white', color: '#64748B', border: '1px solid #CBD5E1', padding: '13px 28px',
+            borderRadius: '10px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer'
+          }}>
+            <X size={16} /> Batal
+          </button>
+        </div>
+      )}
     </div>
   );
+
 
   const renderDashboard = () => (
     <div>
