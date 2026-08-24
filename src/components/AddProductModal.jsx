@@ -18,14 +18,22 @@ export default function AddProductModal({
   const [phoneSuffix, setPhoneSuffix] = useState("");
   const [nib, setNib] = useState("");
   const [tag, setTag] = useState("");
+  const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [uploadProgress, setUploadProgress] = useState("");
 
-  // Auto-fill seller data from profile on mount
+  // Admin/SuperAdmin can see & edit seller fields; UMKM auto-fills
+  const isAdminOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+
+  // Track if UMKM seller profile has address filled
+  const [sellerProfileReady, setSellerProfileReady] = useState(true);
+
+  // Auto-fill seller data from profile on mount (UMKM only)
   const fullName = currentUser?.user_metadata?.full_name || '';
   useEffect(() => {
     if (!currentUser?.id || !supabase || !isSupabaseConfigured) return;
+    if (isAdminOrSuper) return;
     const loadSeller = async () => {
       try {
         const { data } = await supabase
@@ -40,13 +48,16 @@ export default function AddProductModal({
             setPhoneSuffix(data.phone.startsWith('62') ? data.phone.slice(2) : data.phone);
           }
           setSellerName(fullName);
+          setSellerProfileReady(Boolean(data.location));
+        } else {
+          setSellerProfileReady(false);
         }
       } catch (e) {
         console.warn("Gagal memuat profil penjual:", e);
       }
     };
     loadSeller();
-  }, [currentUser?.id, fullName]);
+  }, [currentUser?.id, fullName, isAdminOrSuper]);
 
   const fileInputRef = useRef(null);
 
@@ -125,6 +136,9 @@ export default function AddProductModal({
     setLoading(true);
 
     try {
+      if (!isAdminOrSuper && !sellerProfileReady) {
+        throw new Error('Lengkapi alamat usaha di Profil Usaha terlebih dahulu.');
+      }
       if (Number(price) <= 0) {
         throw new Error("Harga harus lebih dari 0.");
       }
@@ -318,7 +332,36 @@ export default function AddProductModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        {!isAdminOrSuper && !sellerProfileReady && (
+          <div style={{
+            background: '#FFF7ED', border: '1px solid #FDBA74', color: '#9A3412',
+            padding: '16px', borderRadius: '10px', marginBottom: '20px',
+            display: 'flex', flexDirection: 'column', gap: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span style={{ fontSize: '0.9rem' }}>
+                Lengkapi alamat usaha di <strong>Profil Usaha</strong> terlebih dahulu sebelum menambahkan produk.
+              </span>
+            </div>
+            <button
+              onClick={() => { onClose(); }}
+              style={{
+                alignSelf: 'flex-end', background: '#059669', color: 'white', border: 'none',
+                padding: '8px 18px', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+            >
+              Ke Profil Usaha
+            </button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} hidden={!isAdminOrSuper && !sellerProfileReady}>
           <div style={{ marginBottom: "14px" }}>
             <label
               style={{
@@ -474,6 +517,97 @@ export default function AddProductModal({
               />
             </div>
           </div>
+
+          {isAdminOrSuper && (
+            <>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '12px',
+                  marginBottom: '14px',
+                }}
+              >
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>
+                    Nama UMKM / Toko *
+                  </label>
+                  <input
+                    type='text'
+                    required
+                    placeholder='Nama usaha UMKM'
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>
+                    NIB
+                  </label>
+                  <input
+                    type='text'
+                    placeholder='Nomor Induk Berusaha (opsional)'
+                    value={nib}
+                    onChange={(e) => setNib(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem' }}
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '12px',
+                  marginBottom: '14px',
+                }}
+              >
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>
+                    Nama Pemilik / Penjual *
+                  </label>
+                  <input
+                    type='text'
+                    required
+                    placeholder='Nama pemilik UMKM'
+                    value={sellerName}
+                    onChange={(e) => setSellerName(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>
+                    No. WhatsApp *
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #CBD5E1', borderRadius: '8px', overflow: 'hidden' }}>
+                    <span style={{ padding: '9px 0 9px 12px', fontSize: '0.9rem', color: '#94A3B8', fontWeight: 600, userSelect: 'none', background: '#F8FAFC', borderRight: '1px solid #E2E8F0' }}>+62</span>
+                    <input
+                      type='tel' required placeholder='81234567890'
+                      value={phoneSuffix}
+                      onChange={(e) => setPhoneSuffix(e.target.value.replace(/\D/g, ''))}
+                      style={{ flex: 1, padding: '9px 12px', border: 'none', fontSize: '0.9rem', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>
+                  Alamat Usaha
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder='Dusun, Desa, Kecamatan, Kabupaten...'
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', resize: 'vertical' }}
+                />
+              </div>
+            </>
+          )}
 
           {/* IMAGE UPLOAD / DRAG & DROP SECTION */}
           <div style={{ marginBottom: "16px" }}>
