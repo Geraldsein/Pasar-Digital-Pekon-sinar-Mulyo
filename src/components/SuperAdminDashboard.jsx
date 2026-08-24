@@ -1,18 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, ShieldCheck, ShieldAlert, Trash2, Edit3, PlusCircle, Mail, Calendar, Crown, Search, CheckCircle2, Box, Users, BarChart3, Store } from 'lucide-react';
+import { LayoutDashboard, Package, ShieldCheck, ShieldAlert, Trash2, Edit3, PlusCircle, Mail, Calendar, Crown, Search, CheckCircle2, Box, Users, BarChart3, Store, Palette } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import DashboardLayout from './ui/DashboardLayout';
 import StatCard from './ui/StatCard';
 import EditProductModal from './EditProductModal';
 import { buildUmkmList } from '../lib/utils';
 
-export default function SuperAdminDashboard({ products, categories, onVerifyProduct, onDeleteProduct, onProductUpdated, onAddProduct, onBack, currentUser, frozenUmkm = [], onDeleteUmkm }) {
+export default function SuperAdminDashboard({ products, categories, onVerifyProduct, onDeleteProduct, onProductUpdated, onAddProduct, onBack, currentUser, frozenUmkm = [], onDeleteUmkm, siteContent = {}, onSaveSiteContent }) {
   const [activePanel, setActivePanel] = useState('dashboard');
   const [adminUsers, setAdminUsers] = useState([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsMsg, setSettingsMsg] = useState('');
+  const [settingsForm, setSettingsForm] = useState({
+    hero_title: '', hero_desc: '', hero_image: '', hero_badge_title: '', hero_badge_subtitle: '', banner_title: '', banner_desc: '', banner_image: ''
+  });
+
+  useEffect(() => {
+    if (siteContent && Object.keys(siteContent).length > 0) {
+      setSettingsForm({
+        hero_title: siteContent.hero_title || '',
+        hero_desc: siteContent.hero_desc || '',
+        hero_image: siteContent.hero_image || '',
+        hero_badge_title: siteContent.hero_badge_title || '',
+        hero_badge_subtitle: siteContent.hero_badge_subtitle || '',
+        banner_title: siteContent.banner_title || '',
+        banner_desc: siteContent.banner_desc || '',
+        banner_image: siteContent.banner_image || '',
+      });
+    }
+  }, [siteContent]);
+
+  const handleSaveSettings = async () => {
+    if (!onSaveSiteContent) return;
+    setSettingsSaving(true);
+    setSettingsMsg('');
+    try {
+      await onSaveSiteContent(settingsForm);
+      setSettingsMsg('Tampilan berhasil disimpan.');
+    } catch (e) {
+      setSettingsMsg(e.message || 'Gagal menyimpan.');
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -141,6 +175,7 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
     { key: 'umkm', label: 'Kelola UMKM', icon: Store },
     { key: 'admins', label: 'Kelola Admin', icon: Users },
     { key: 'reports', label: 'Laporan', icon: BarChart3 },
+    { key: 'settings', label: 'Tampilan Website', icon: Palette },
   ];
 
   const umkmList = buildUmkmList(products, frozenUmkm);
@@ -448,6 +483,111 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
     </div>
   );
 
+  const inputStyle = {
+    width: '100%', padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: '8px',
+    fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+  };
+  const labelStyle = { display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: '#1E293B' };
+
+  const renderSettings = () => (
+    <div style={{ maxWidth: '640px' }}>
+      <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1E293B', marginBottom: '6px' }}>Tampilan Website</h3>
+      <p style={{ fontSize: '0.9rem', color: '#64748B', marginBottom: '20px' }}>
+        Ubah judul, deskripsi, dan gambar yang tampil di halaman utama portal.
+      </p>
+
+      {settingsMsg && (
+        <div style={{
+          background: settingsMsg.includes('Gagal') ? '#FEE2E2' : '#DCFCE7',
+          color: settingsMsg.includes('Gagal') ? '#991B1B' : '#166534',
+          padding: '12px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px'
+        }}>
+          {settingsMsg}
+        </div>
+      )}
+
+      <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '24px' }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#1E293B', margin: '0 0 8px', paddingBottom: '8px', borderBottom: '1px solid #E5E7EB' }}>
+          Hero Section (Atas)
+        </h4>
+        <div style={{ marginBottom: '14px' }}>
+          <label style={labelStyle}>Judul Hero</label>
+          <input style={inputStyle} value={settingsForm.hero_title}
+            onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_title: e.target.value }))}
+            placeholder="Pasar Digital Desa" />
+        </div>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Deskripsi Hero</label>
+          <textarea rows={3} style={inputStyle} value={settingsForm.hero_desc}
+            onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_desc: e.target.value }))}
+            placeholder="Dukung pertumbuhan ekonomi lokal..." />
+        </div>
+
+        <div style={{ marginBottom: '14px' }}>
+          <label style={labelStyle}>URL Gambar Hero</label>
+          <input type="url" style={inputStyle} value={settingsForm.hero_image}
+            onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_image: e.target.value }))}
+            placeholder="https://images.unsplash.com/..." />
+          {settingsForm.hero_image && (
+            <img src={settingsForm.hero_image} alt="Preview hero" onError={(e) => { e.target.style.display = 'none'; }}
+              style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px' }} />
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+          <div>
+            <label style={labelStyle}>Badge Judul</label>
+            <input style={inputStyle} value={settingsForm.hero_badge_title}
+              onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_badge_title: e.target.value }))}
+              placeholder="150+ Pelaku UMKM" />
+          </div>
+          <div>
+            <label style={labelStyle}>Badge Sub-judul</label>
+            <input style={inputStyle} value={settingsForm.hero_badge_subtitle}
+              onChange={(e) => setSettingsForm(prev => ({ ...prev, hero_badge_subtitle: e.target.value }))}
+              placeholder="Terverifikasi Digital" />
+          </div>
+        </div>
+
+        <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#1E293B', margin: '20px 0 8px', paddingBottom: '8px', borderBottom: '1px solid #E5E7EB' }}>
+          Banner Section
+        </h4>
+        <div style={{ marginBottom: '14px' }}>
+          <label style={labelStyle}>Judul Banner</label>
+          <input style={inputStyle} value={settingsForm.banner_title}
+            onChange={(e) => setSettingsForm(prev => ({ ...prev, banner_title: e.target.value }))}
+            placeholder="Potensi Desa Digital Kami" />
+        </div>
+        <div style={{ marginBottom: '14px' }}>
+          <label style={labelStyle}>Deskripsi Banner</label>
+          <textarea rows={3} style={inputStyle} value={settingsForm.banner_desc}
+            onChange={(e) => setSettingsForm(prev => ({ ...prev, banner_desc: e.target.value }))}
+            placeholder="Kami percaya bahwa teknologi dapat..." />
+        </div>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>URL Gambar Banner</label>
+          <input type="url" style={inputStyle} value={settingsForm.banner_image}
+            onChange={(e) => setSettingsForm(prev => ({ ...prev, banner_image: e.target.value }))}
+            placeholder="https://images.unsplash.com/..." />
+          {settingsForm.banner_image && (
+            <img src={settingsForm.banner_image} alt="Preview banner" onError={(e) => { e.target.style.display = 'none'; }}
+              style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px' }} />
+          )}
+        </div>
+
+        <button onClick={handleSaveSettings} disabled={settingsSaving} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          background: '#7C3AED', color: 'white', border: 'none', padding: '12px',
+          borderRadius: '10px', fontWeight: 700, fontSize: '0.95rem',
+          cursor: settingsSaving ? 'not-allowed' : 'pointer', opacity: settingsSaving ? 0.75 : 1
+        }}>
+          <Palette size={18} />
+          {settingsSaving ? 'Menyimpan...' : 'Simpan Tampilan'}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <DashboardLayout
       sidebarItems={sidebarItems}
@@ -463,6 +603,7 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
       {activePanel === 'umkm' && renderUmkm(onDeleteUmkm)}
       {activePanel === 'admins' && renderAdmins()}
       {activePanel === 'reports' && renderReports()}
+      {activePanel === 'settings' && renderSettings()}
 
       {showEditModal && editingProduct && (
         <EditProductModal

@@ -34,6 +34,16 @@ export default function App() {
   const [showAdminDashboard, setAdminViewInternal] = useState(false);
   const [showSuperAdminDashboard, setShowSuperAdminDashboard] = useState(false);
   const [showUmkmDashboard, setShowUmkmDashboard] = useState(false);
+  const [siteContent, setSiteContent] = useState({
+    hero_title: 'Pasar Digital Desa',
+    hero_desc: 'Dukung pertumbuhan ekonomi lokal dengan berbelanja produk unggulan langsung dari pengrajin dan petani desa kami. Kualitas autentik, harga terbaik.',
+    hero_image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80',
+    hero_badge_title: '150+ Pelaku UMKM',
+    hero_badge_subtitle: 'Terverifikasi Digital',
+    banner_title: 'Potensi Desa Digital Kami',
+    banner_desc: 'Kami percaya bahwa teknologi dapat mempertemukan kearifan lokal dengan pasar yang lebih luas. Melalui platform ini, kami berkomitmen untuk memberdayakan setiap pelaku UMKM di desa agar dapat bersaing secara global sambil tetap menjaga keaslian budaya kami.',
+    banner_image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80'
+  });
   const [frozenUmkm] = useState([]);
   const [umkmUsers, setUmkmUsers] = useState([]);
 
@@ -178,6 +188,18 @@ export default function App() {
       } finally {
         setLoading(false);
       }
+
+      // Fetch site content
+      try {
+        const { data: contentData } = await supabase
+          .from("site_content")
+          .select("*");
+        if (contentData && contentData.length > 0) {
+          const obj = {};
+          contentData.forEach((row) => { obj[row.key] = row.value; });
+          setSiteContent((prev) => ({ ...prev, ...obj }));
+        }
+      } catch { /* ignore */ }
     };
 
     fetchData();
@@ -269,6 +291,21 @@ export default function App() {
     }
   };
 
+  const handleSaveSiteContent = async (content) => {
+    if (!supabase || !isSupabaseConfigured) return;
+    try {
+      for (const [key, value] of Object.entries(content)) {
+        await supabase.from('site_content').upsert(
+          { key, value: String(value) },
+          { onConflict: 'key' }
+        );
+      }
+      setSiteContent((prev) => ({ ...prev, ...content }));
+    } catch (err) {
+      console.error('Error saving site content:', err);
+    }
+  };
+
   // Filter products based on search query and selected category
   const filteredProducts = useMemo(() => {
     return products.filter((item) => {
@@ -325,6 +362,8 @@ export default function App() {
             umkmUsers={umkmUsers}
             onDeleteUmkm={handleDeleteUmkmUser}
             onRefreshUmkmUsers={fetchUmkmUsers}
+            siteContent={siteContent}
+            onSaveSiteContent={handleSaveSiteContent}
           />
         </ErrorBoundary>
         {showAddProductModal && (
@@ -355,6 +394,8 @@ export default function App() {
             frozenUmkm={frozenUmkm}
             onDeleteUmkm={handleDeleteUmkmUser}
             onRefreshUmkmUsers={fetchUmkmUsers}
+            siteContent={siteContent}
+            onSaveSiteContent={handleSaveSiteContent}
           />
         </ErrorBoundary>
         {showAddProductModal && (
@@ -413,6 +454,11 @@ export default function App() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onSearchSubmit={handleSearchSubmit}
+        heroTitle={siteContent.hero_title}
+        heroDesc={siteContent.hero_desc}
+        heroImage={siteContent.hero_image}
+        heroBadgeTitle={siteContent.hero_badge_title}
+        heroBadgeSubtitle={siteContent.hero_badge_subtitle}
       />
 
       <AnimatedSection className="section-kategori">
@@ -443,13 +489,16 @@ export default function App() {
       )}
 
       <AnimatedSection animation="fade-up" delay={200}>
-        <BannerSection
-          onLearnMore={() =>
-            alert(
-              "Informasi Potensi Desa Digital: Portal UMKM Desa memberdayakan ratusan petani dan pengrajin lokal untuk go digital.",
-            )
-          }
-        />
+      <BannerSection
+        onLearnMore={() =>
+          alert(
+            "Informasi Potensi Desa Digital: Portal UMKM Desa memberdayakan ratusan petani dan pengrajin lokal untuk go digital.",
+          )
+        }
+        bannerTitle={siteContent.banner_title}
+        bannerDesc={siteContent.banner_desc}
+        bannerImage={siteContent.banner_image}
+      />
       </AnimatedSection>
 
       <Footer onOpenAuth={() => setShowAuthModal(true)} />
