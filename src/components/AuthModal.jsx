@@ -9,6 +9,9 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [nib, setNib] = useState('');
+  const [phoneSuffix, setPhoneSuffix] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -42,8 +45,8 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
           if (onAuthSuccess) onAuthSuccess(data.user);
         }
       } else {
-        if (!fullName || !email || !password || !confirmPassword) {
-          throw new Error('Semua field harus diisi');
+        if (!fullName || !email || !password || !confirmPassword || !businessName || !phoneSuffix) {
+          throw new Error('Semua field wajib harus diisi');
         }
         if (password !== confirmPassword) {
           throw new Error('Password dan konfirmasi password tidak cocok');
@@ -77,7 +80,13 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
 
         if (error) throw error;
         if (data.user) {
-          // User created, will auto-login and redirect to UMKM dashboard
+          // Simpan profil seller ke tabel sellers
+          await supabase.from('sellers').insert({
+            phone: '62' + phoneSuffix,
+            user_id: data.user.id,
+            business_name: businessName,
+            nib: nib || null
+          });
           if (onAuthSuccess) onAuthSuccess(data.user);
         }
       }
@@ -95,6 +104,9 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setBusinessName('');
+    setNib('');
+    setPhoneSuffix('');
   };
 
   return (
@@ -159,6 +171,53 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
                 style={{ width: '100%', padding: '12px 16px', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
+          )}
+
+          {!isLogin && (
+            <>
+              <div style={{ marginBottom: '20px' }}>
+                <label htmlFor="businessName" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px', color: '#1E293B' }}>
+                  Nama UMKM / Toko
+                </label>
+                <input
+                  type="text" id="businessName" required
+                  placeholder="Nama usaha Anda"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                <div>
+                  <label htmlFor="nib" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px', color: '#1E293B' }}>
+                    NIB
+                  </label>
+                  <input
+                    type="text" id="nib"
+                    placeholder="Nomor Induk Berusaha"
+                    value={nib}
+                    onChange={(e) => setNib(e.target.value)}
+                    style={{ width: '100%', padding: '12px 16px', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="phoneSuffix" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px', color: '#1E293B' }}>
+                    No. WhatsApp
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden' }}>
+                    <span style={{ padding: '12px 0 12px 14px', fontSize: '0.9rem', color: '#94A3B8', fontWeight: 600, userSelect: 'none', background: '#F8FAFC', borderRight: '1px solid #E2E8F0' }}>+62</span>
+                    <input
+                      type="tel" id="phoneSuffix" required
+                      placeholder="81234567890"
+                      value={phoneSuffix}
+                      onChange={(e) => setPhoneSuffix(e.target.value.replace(/\D/g, ''))}
+                      style={{ flex: 1, padding: '12px', border: 'none', fontSize: '0.95rem', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
           )}
 
           <div style={{ marginBottom: '20px' }}>

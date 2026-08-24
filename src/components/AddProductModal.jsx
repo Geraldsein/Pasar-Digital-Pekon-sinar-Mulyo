@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { UploadCloud } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
@@ -21,6 +21,32 @@ export default function AddProductModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [uploadProgress, setUploadProgress] = useState("");
+
+  // Auto-fill seller data from profile on mount
+  const fullName = currentUser?.user_metadata?.full_name || '';
+  useEffect(() => {
+    if (!currentUser?.id || !supabase || !isSupabaseConfigured) return;
+    const loadSeller = async () => {
+      try {
+        const { data } = await supabase
+          .from('sellers')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+        if (data) {
+          setBusinessName(data.business_name || '');
+          setNib(data.nib || '');
+          if (data.phone) {
+            setPhoneSuffix(data.phone.startsWith('62') ? data.phone.slice(2) : data.phone);
+          }
+          setSellerName(fullName);
+        }
+      } catch (e) {
+        console.warn("Gagal memuat profil penjual:", e);
+      }
+    };
+    loadSeller();
+  }, [currentUser?.id, fullName]);
 
   const fileInputRef = useRef(null);
 
@@ -438,131 +464,6 @@ export default function AddProductModal({
                 placeholder="/pcs, /kg, /buah"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  border: "1px solid #CBD5E1",
-                  borderRadius: "8px",
-                  fontSize: "0.9rem",
-                }}
-              />
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px",
-              marginBottom: "14px",
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  marginBottom: "4px",
-                }}
-              >
-                Nama UMKM / Toko
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Nama usaha Anda"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  border: "1px solid #CBD5E1",
-                  borderRadius: "8px",
-                  fontSize: "0.9rem",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  marginBottom: "4px",
-                }}
-              >
-                NIB
-              </label>
-              <input
-                type="text"
-                placeholder="Nomor Induk Berusaha"
-                value={nib}
-                onChange={(e) => setNib(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  border: "1px solid #CBD5E1",
-                  borderRadius: "8px",
-                  fontSize: "0.9rem",
-                }}
-              />
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px",
-              marginBottom: "16px",
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  marginBottom: "4px",
-                }}
-              >
-                Nama Penjual / Pemilik
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Nama pemilik UMKM"
-                value={sellerName}
-                onChange={(e) => setSellerName(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  border: "1px solid #CBD5E1",
-                  borderRadius: "8px",
-                  fontSize: "0.9rem",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  marginBottom: "4px",
-                }}
-              >
-                No. WhatsApp
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="628123456789"
-                value={phoneSuffix}
-                onChange={(e) => setPhoneSuffix(e.target.value.replace(/\D/g, ""))}
                 style={{
                   width: "100%",
                   padding: "9px 12px",
