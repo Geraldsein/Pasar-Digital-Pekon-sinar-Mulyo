@@ -61,6 +61,7 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
     { key: 'products', label: 'Produk', icon: Package },
     { key: 'umkm', label: 'Kelola UMKM', icon: Store },
     { key: 'settings', label: 'Tampilan Website', icon: Palette },
+    { key: 'password', label: 'Ganti Password', icon: Lock },
   ];
 
   const umkmList = buildUmkmList(products, frozenUmkm);
@@ -72,6 +73,11 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
   const [settingsMsg, setSettingsMsg] = useState('');
   const [isEditingSettings, setIsEditingSettings] = useState(false);
   const [originalSettingsForm, setOriginalSettingsForm] = useState(null);
+  const [pwNew, setPwNew] = useState('');
+  const [pwConfirm, setPwConfirm] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwMsg, setPwMsg] = useState('');
+  const [pwErr, setPwErr] = useState('');
 
   useEffect(() => {
     if (siteContent && Object.keys(siteContent).length > 0) {
@@ -259,6 +265,61 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
     </div>
   );
 
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwErr("");
+    setPwMsg("");
+    if (!pwNew || !pwConfirm) { setPwErr("Semua field harus diisi."); return; }
+    if (pwNew.length < 6) { setPwErr("Password minimal 6 karakter."); return; }
+    if (pwNew !== pwConfirm) { setPwErr("Konfirmasi password tidak cocok."); return; }
+    setPwLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pwNew });
+      if (error) throw error;
+      setPwMsg("Password berhasil diubah.");
+      setPwNew("");
+      setPwConfirm("");
+    } catch (err) {
+      setPwErr(err.message || "Gagal mengubah password.");
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
+  const pwInputStyle = {
+    width: "100%", padding: "10px 14px", border: "1px solid #CBD5E1", borderRadius: "8px",
+    fontSize: "0.9rem", outline: "none", boxSizing: "border-box"
+  };
+  const pwLabelStyle = { display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "6px", color: "#1E293B" };
+
+  const renderPassword = () => (
+    <div style={{ maxWidth: "440px" }}>
+      <h3 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#1E293B", marginBottom: "6px" }}>Ganti Password</h3>
+      <p style={{ fontSize: "0.9rem", color: "#64748B", marginBottom: "20px" }}>
+        Ubah password akun Admin Anda.
+      </p>
+      {pwMsg && <div style={{ background: "#DCFCE7", color: "#166534", padding: "12px 14px", borderRadius: "8px", fontSize: "0.85rem", marginBottom: "16px" }}>{pwMsg}</div>}
+      {pwErr && <div style={{ background: "#FEE2E2", color: "#991B1B", padding: "12px 14px", borderRadius: "8px", fontSize: "0.85rem", marginBottom: "16px" }}>{pwErr}</div>}
+      <form onSubmit={handleChangePassword} style={{ background: "white", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "24px" }}>
+        <div style={{ marginBottom: "16px" }}>
+          <label style={pwLabelStyle}>Password Baru</label>
+          <input type="password" required value={pwNew} onChange={(e) => setPwNew(e.target.value)} placeholder="Minimal 6 karakter" style={pwInputStyle} />
+        </div>
+        <div style={{ marginBottom: "20px" }}>
+          <label style={pwLabelStyle}>Konfirmasi Password Baru</label>
+          <input type="password" required value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} placeholder="Ulangi password baru" style={pwInputStyle} />
+        </div>
+        <button type="submit" disabled={pwLoading} style={{
+          width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+          background: "#0F2C59", color: "white", border: "none", padding: "12px",
+          borderRadius: "10px", fontWeight: 700, fontSize: "0.95rem",
+          cursor: pwLoading ? "not-allowed" : "pointer", opacity: pwLoading ? 0.75 : 1
+        }}>
+          <Lock size={18} /> {pwLoading ? "Menyimpan..." : "Ubah Password"}
+        </button>
+      </form>
+    </div>
+  );
 
   const renderDashboard = () => (
     <div>
@@ -534,6 +595,7 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
       {activePanel === 'products' && renderProducts()}
       {activePanel === 'umkm' && renderUmkm(onDeleteUmkm)}
       {activePanel === 'settings' && renderSettings()}
+      {activePanel === 'password' && renderPassword()}
 
       {showEditModal && editingProduct && (
         <EditProductModal
