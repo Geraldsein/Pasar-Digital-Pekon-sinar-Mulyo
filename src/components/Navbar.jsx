@@ -230,11 +230,17 @@ export default function Navbar({
             </>
           ) : (
             <>
-              <button className="btn-masuk hide-mobile" onClick={onOpenAuth}>
-                Masuk
+              <button className="hide-mobile" onClick={onOpenAuth} style={{
+                background: 'none', border: '1px solid #CBD5E1', color: '#64748B',
+                padding: '7px 16px', borderRadius: '8px', fontWeight: 500, fontSize: '0.85rem', cursor: 'pointer'
+              }}>
+                Login Admin
               </button>
-              <button className="btn-masuk show-mobile" onClick={onOpenAuth} style={{ padding: '8px 14px' }}>
-                Masuk
+              <button className="show-mobile" onClick={onOpenAuth} style={{
+                background: 'none', border: '1px solid #CBD5E1', color: '#64748B',
+                padding: '6px 12px', borderRadius: '8px', fontWeight: 500, fontSize: '0.8rem', cursor: 'pointer'
+              }}>
+                Login
               </button>
             </>
           )}

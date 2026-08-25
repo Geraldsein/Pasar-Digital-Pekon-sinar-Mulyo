@@ -135,10 +135,10 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
       }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1E293B', margin: '0 0 8px' }}>
-            {isLogin ? 'Masuk ke Akun' : 'Buat Akun Baru'}
+            {isLogin ? 'Masuk ke Akun' : 'Daftar sebagai Pelaku UMKM'}
           </h3>
           <p style={{ color: '#64748B', fontSize: '0.95rem', margin: '4px 0 0' }}>
-            {isLogin ? 'Masuk untuk memilih peran Anda' : 'Daftar untuk memulai'}
+            {isLogin ? 'Khusus pelaku UMKM, admin, dan pengelola' : 'Khusus pelaku UMKM untuk mengelola produk di portal ini'}
           </p>
         </div>
 
@@ -314,9 +314,20 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
             background: 'none', border: 'none', color: '#1E40AF', fontSize: '0.9rem',
             fontWeight: 700, cursor: 'pointer', textDecoration: 'underline'
           }}>
-            {isLogin ? 'Buat Akun Sekarang' : 'Masuk ke Akun'}
+            {isLogin ? 'Daftar sebagai Pelaku UMKM' : 'Masuk ke Akun'}
           </button>
         </div>
+
+        {!isLogin && (
+          <div style={{
+            textAlign: 'center', marginTop: '16px', padding: '12px',
+            background: '#F0FDF4', borderRadius: '10px', border: '1px solid #BBF7D0'
+          }}>
+            <p style={{ fontSize: '0.85rem', color: '#166534', margin: 0 }}>
+              💚 Ingin belanja? <strong>Tidak perlu daftar</strong> — langsung klik "Beli via WhatsApp" pada produk yang diinginkan.
+            </p>
+          </div>
+        )}
 
         {isLogin && (
           <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#94A3B8', margin: '20px 0 0', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
