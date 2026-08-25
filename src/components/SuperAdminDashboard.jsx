@@ -17,6 +17,8 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState('');
   const [isEditingSettings, setIsEditingSettings] = useState(false);
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
   
   const [pwNew, setPwNew] = useState('');
   const [pwConfirm, setPwConfirm] = useState('');
@@ -167,6 +169,7 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
   };
 
   const handleVerify = (productId, verified) => { if (onVerifyProduct) onVerifyProduct(productId, verified); };
+  const openRejectModal = (productId) => { setRejectModal(productId); setRejectReason(''); };
   const handleDelete = (productId) => { if (window.confirm('Apakah Anda yakin ingin menghapus produk ini?')) { if (onDeleteProduct) onDeleteProduct(productId); } };
   const handleEdit = (product) => { setEditingProduct(product); setShowEditModal(true); };
   const handleProductUpdated = (updatedProduct) => { if (onProductUpdated) onProductUpdated(updatedProduct); };
@@ -365,7 +368,7 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
                     )}
 
                     {!isRejected && (
-                      <button onClick={() => handleVerify(product.id, false)} style={{
+                      <button onClick={() => openRejectModal(product.id)} style={{
                         flex: 1, background: '#DC2626', color: 'white', border: 'none', padding: '8px', borderRadius: '6px',
                         fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
                       }}>
@@ -745,6 +748,46 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
           onClose={() => { setShowEditModal(false); setEditingProduct(null); }}
           onProductUpdated={handleProductUpdated}
         />
+      )}
+
+      {rejectModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
+          onClick={() => setRejectModal(null)}>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '28px', maxWidth: '440px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+            onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 800, color: '#DC2626' }}>Tolak Produk</h3>
+            <p style={{ margin: '0 0 16px', fontSize: '0.9rem', color: '#64748B' }}>
+              Tuliskan alasan penolakan agar UMKM memahami perbaikan yang diperlukan.
+            </p>
+            <textarea
+              rows={3}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Contoh: Foto produk tidak jelas, deskripsi kurang lengkap..."
+              style={{ width: '100%', padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', resize: 'vertical', marginBottom: '16px' }}
+            />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setRejectModal(null)} style={{
+                background: 'white', border: '1px solid #CBD5E1', padding: '10px 20px',
+                borderRadius: '8px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', color: '#64748B'
+              }}>
+                Batal
+              </button>
+              <button onClick={() => {
+                if (!rejectReason.trim()) return;
+                if (onVerifyProduct) onVerifyProduct(rejectModal, false, rejectReason.trim());
+                setRejectModal(null);
+                setRejectReason('');
+              }} disabled={!rejectReason.trim()} style={{
+                background: '#DC2626', color: 'white', border: 'none', padding: '10px 20px',
+                borderRadius: '8px', fontWeight: 600, fontSize: '0.9rem',
+                cursor: rejectReason.trim() ? 'pointer' : 'not-allowed', opacity: rejectReason.trim() ? 1 : 0.5
+              }}>
+                Tolak Produk
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </DashboardLayout>
   );

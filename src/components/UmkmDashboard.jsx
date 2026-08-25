@@ -16,7 +16,10 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
   const [businessName, setBusinessName] = useState('');
   const [nib, setNib] = useState('');
   const [phone, setPhone] = useState('');
-  const [location, setLocation] = useState('');
+  const [province, setProvince] = useState('');
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [detailAddress, setDetailAddress] = useState('');
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
   const [profileLoading, setProfileLoading] = useState(true);
@@ -48,7 +51,16 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
             setBusinessName(data.business_name || '');
             setNib(data.nib || '');
             setPhone(data.phone || '');
-            setLocation(data.location || '');
+            // Parse structured address from location string
+            const parts = (data.location || '').split(', ');
+            if (parts.length >= 4) {
+              setDetailAddress(parts.slice(0, parts.length - 3).join(', '));
+              setDistrict(parts[parts.length - 3]);
+              setCity(parts[parts.length - 2]);
+              setProvince(parts[parts.length - 1]);
+            } else {
+              setDetailAddress(data.location || '');
+            }
             setLat(data.lat != null ? String(data.lat) : '');
             setLng(data.lng != null ? String(data.lng) : '');
           }
@@ -87,12 +99,13 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
     setProfileErr('');
     setProfileMsg('');
     try {
+      const combinedLocation = [detailAddress, district, city, province].filter(Boolean).join(', ');
       const payload = {
         user_id: owner,
         phone: phone || (currentUser?.email || ''),
         business_name: businessName || null,
         nib: nib || null,
-        location: location || null,
+        location: combinedLocation || null,
         lat: lat ? Number(lat) : null,
         lng: lng ? Number(lng) : null,
       };
@@ -118,6 +131,7 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
 
   const getStatus = (p) => {
     if (p.verified) return { label: 'Terverifikasi', color: '#059669', bg: '#ECFDF5' };
+    if (p.status === 'rejected') return { label: 'Ditolak', color: '#DC2626', bg: '#FEE2E2' };
     return { label: 'Menunggu', color: '#D97706', bg: '#FEF3C7' };
   };
 
@@ -205,8 +219,15 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
 
           <div style={{ marginBottom: '14px' }}>
             <label style={labelStyle}>Alamat Usaha</label>
-            <textarea rows={2} style={inputStyle} value={location} onChange={(e) => setLocation(e.target.value)}
-              placeholder="Dusun, Desa, Kecamatan, Kabupaten..." />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+              <input style={inputStyle} value={province} onChange={(e) => setProvince(e.target.value)} placeholder="Provinsi" />
+              <input style={inputStyle} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Kabupaten/Kota" />
+            </div>
+            <div style={{ marginBottom: '10px' }}>
+              <input style={inputStyle} value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="Kecamatan/Desa" />
+            </div>
+            <textarea rows={2} style={inputStyle} value={detailAddress} onChange={(e) => setDetailAddress(e.target.value)}
+              placeholder="Detail alamat (jalan, RT/RW, nomor rumah, patokan...)" />
           </div>
 
           <div style={{ marginBottom: '20px' }}>
@@ -303,9 +324,17 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
                       {status.label}
                     </span>
                   </div>
-                  <div style={{ fontSize: '0.85rem', color: '#64748B', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#64748B', marginBottom: '8px' }}>
                     {product.sellerName}
                   </div>
+                  {status.label === 'Ditolak' && product.rejection_reason && (
+                    <div style={{
+                      background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px',
+                      padding: '10px 12px', marginBottom: '12px', fontSize: '0.8rem', color: '#991B1B'
+                    }}>
+                      <strong>Alasan penolakan:</strong> {product.rejection_reason}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button onClick={() => handleEdit(product)} style={{
                       flex: 1, background: '#1E40AF', color: 'white', border: 'none', padding: '8px', borderRadius: '6px',

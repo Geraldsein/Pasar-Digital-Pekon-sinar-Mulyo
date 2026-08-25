@@ -215,7 +215,7 @@ export default function App() {
     setProducts((prev) => [newProduct, ...prev]);
   };
 
-  const handleVerifyProduct = async (productId, verified) => {
+  const handleVerifyProduct = async (productId, verified, rejectionReason) => {
     const newVerified = verified;
     // Optimistic UI state update (matches string or number IDs)
     setProducts((prev) =>
@@ -225,6 +225,7 @@ export default function App() {
               ...p,
               verified: newVerified,
               status: verified ? 'approved' : 'rejected',
+              rejection_reason: verified ? null : (rejectionReason || null),
             }
           : p
       )
@@ -232,13 +233,20 @@ export default function App() {
 
     try {
       if (supabase && isSupabaseConfigured) {
+        const updatePayload = { 
+          verified: newVerified, 
+          status: verified ? 'approved' : 'rejected',
+          updated_at: new Date().toISOString()
+        };
+        if (!verified && rejectionReason) {
+          updatePayload.rejection_reason = rejectionReason;
+        }
+        if (verified) {
+          updatePayload.rejection_reason = null;
+        }
         const { error } = await supabase
           .from('products')
-          .update({ 
-            verified: newVerified, 
-            status: verified ? 'approved' : 'rejected',
-            updated_at: new Date().toISOString()
-          })
+          .update(updatePayload)
           .eq('id', productId);
         if (error) {
           console.warn('Supabase update warning:', error.message || error);

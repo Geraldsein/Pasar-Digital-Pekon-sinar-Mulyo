@@ -19,7 +19,7 @@ export default function LocationModal({ product, onClose }) {
   // Embedded map: Google Maps embed pakai koordinat (tanpa API key), fallback ke OpenStreetMap
   const mapEmbedUrl = hasCoords
     ? `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`
-    : `https://www.openstreetmap.org/export/embed.html?bbox=115.15%2C-8.45%2C115.30%2C-8.30&layer=mapnik&marker=-8.375%2C115.225`;
+    : `https://maps.google.com/maps?q=${encodedAddress}&z=15&output=embed`;
 
   return (
     <BaseModal isOpen={true} onClose={onClose} title="Peta & Lokasi UMKM">
