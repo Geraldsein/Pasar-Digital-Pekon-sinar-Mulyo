@@ -236,7 +236,13 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
             <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #CBD5E1', borderRadius: '8px', overflow: 'hidden' }}>
               <span style={{ padding: '10px 0 10px 14px', fontSize: '0.9rem', color: '#94A3B8', fontWeight: 600, userSelect: 'none', background: '#F8FAFC', borderRight: '1px solid #E2E8F0' }}>+62</span>
               <input style={{ flex: 1, padding: '10px 12px', border: 'none', fontSize: '0.9rem', outline: 'none' }}
-                value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="81234567890" />
+                value={phone} onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '');
+                  // Strip leading 62 or 0 if user pastes full number
+                  let cleaned = digits.replace(/^62/, '').replace(/^0/, '');
+                  setPhone(cleaned);
+                }}
+                placeholder="81234567890" />
             </div>
           </div>
 
