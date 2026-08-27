@@ -6,12 +6,15 @@ export default function LocationModal({ product, onClose }) {
   if (!product) return null;
 
   const sellerAddress = product.location || `Dusun Krajan RT 03/RW 01, Desa Sukamaju, Kec. Digital, Kabupaten UMKM`;
-  const encodedAddress = encodeURIComponent(`${product.sellerName} ${sellerAddress}`);
+  const encodedAddress = encodeURIComponent(sellerAddress);
   const hasCoords = product.lat != null && product.lng != null;
   const lat = hasCoords ? Number(product.lat) : null;
   const lng = hasCoords ? Number(product.lng) : null;
 
   // Google Maps link: pakai koordinat jika ada, kalau tidak fallback ke pencarian alamat
+  const waPhone = String(product.sellerPhone || '').replace(/\D/g, '');
+  const waPhoneClean = waPhone.startsWith('0') ? '62' + waPhone.slice(1) : (!waPhone.startsWith('62') && waPhone ? '62' + waPhone : waPhone);
+
   const googleMapsUrl = hasCoords
     ? `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
@@ -89,7 +92,7 @@ export default function LocationModal({ product, onClose }) {
           </a>
 
           <a
-            href={`https://wa.me/${product.sellerPhone}?text=Halo%20${encodeURIComponent(product.sellerName)},%20bisa%20kirimkan%20share%20location%20lokasi%20toko%20Anda%3F`}
+            href={`https://wa.me/${waPhoneClean}?text=Halo%20${encodeURIComponent(product.sellerName)},%20bisa%20kirimkan%20share%20location%20lokasi%20toko%20Anda%3F`}
             target="_blank"
             rel="noopener noreferrer"
             style={{

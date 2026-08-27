@@ -20,7 +20,12 @@ ${note ? `- *Catatan*: ${note}` : ''}
 Mohon konfirmasi ketersediaan barang. Terima kasih!`;
 
     const encodedMessage = encodeURIComponent(message);
-    const waUrl = `https://wa.me/${product.sellerPhone}?text=${encodedMessage}`;
+    // Normalize phone: keep digits only, ensure 62 prefix
+    let phone = String(product.sellerPhone || '').replace(/\D/g, '');
+    if (phone.startsWith('0')) phone = '62' + phone.slice(1);
+    if (!phone.startsWith('62')) phone = '62' + phone;
+    if (!phone) { onClose(); return; }
+    const waUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
     window.open(waUrl, '_blank');
     onClose();
   };

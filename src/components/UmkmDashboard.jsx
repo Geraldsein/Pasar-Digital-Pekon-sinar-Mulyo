@@ -22,6 +22,8 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
   const [detailAddress, setDetailAddress] = useState('');
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
+  const [pastedLoc, setPastedLoc] = useState('');
+  const [mapsLink, setMapsLink] = useState('');
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileSaving, setProfileSaving] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -50,7 +52,8 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
           if (!error && data) {
             setBusinessName(data.business_name || '');
             setNib(data.nib || '');
-            setPhone(data.phone || '');
+            const storedPhone = data.phone || '';
+            setPhone(storedPhone.startsWith('62') ? storedPhone.slice(2) : storedPhone);
             // Parse structured address from location string
             const parts = (data.location || '').split(', ');
             if (parts.length >= 4) {
@@ -63,6 +66,8 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
             }
             setLat(data.lat != null ? String(data.lat) : '');
             setLng(data.lng != null ? String(data.lng) : '');
+            setMapsLink(data.maps_link || '');
+            setPastedLoc(data.maps_link || (data.lat != null && data.lng != null ? `${data.lat}, ${data.lng}` : ''));
           }
         } catch (e) { console.warn('Gagal memuat profil:', e); }
       }
@@ -77,8 +82,11 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
     setProfileErr('');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLat(pos.coords.latitude.toFixed(6));
-        setLng(pos.coords.longitude.toFixed(6));
+        const lt = pos.coords.latitude.toFixed(6);
+        const lg = pos.coords.longitude.toFixed(6);
+        setLat(lt);
+        setLng(lg);
+        setPastedLoc(`${lt}, ${lg}`);
         setLocating(false);
       },
       (err) => {
@@ -87,6 +95,20 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  };
+
+  // Parse pasted Google Maps link/coords into lat & lng
+  const handlePasteLoc = (value) => {
+    setPastedLoc(value);
+    setMapsLink(value);
+    // Detect coordinates: "lat, lng" OR google maps URL containing /@lat,lng, OR ?q=lat,lng
+    let coords = value.match(/-?\d+\.\d{4,}/g);
+    // If plain "lat, lng" with fewer decimals, also match
+    if (!coords || coords.length < 2) coords = value.match(/-?\d+\.\d+/g);
+    if (coords && coords.length >= 2) {
+      setLat(coords[0]);
+      setLng(coords[1]);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -102,12 +124,13 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
       const combinedLocation = [detailAddress, district, city, province].filter(Boolean).join(', ');
       const payload = {
         user_id: owner,
-        phone: phone || (currentUser?.email || ''),
+        phone: phone ? '62' + phone.replace(/\D/g, '') : null,
         business_name: businessName || null,
         nib: nib || null,
-        location: combinedLocation || null,
+        location: combinedLocation || (mapsLink || null),
         lat: lat ? Number(lat) : null,
         lng: lng ? Number(lng) : null,
+        maps_link: mapsLink || null,
       };
       const { error } = await supabase
         .from('sellers')
@@ -232,10 +255,11 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
 
           <div style={{ marginBottom: '20px' }}>
             <label style={labelStyle}>Lokasi Google Maps</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
-              <input style={inputStyle} value={lat} onChange={(e) => setLat(e.target.value)} placeholder="Latitude (mis. -8.375000)" />
-              <input style={inputStyle} value={lng} onChange={(e) => setLng(e.target.value)} placeholder="Longitude (mis. 115.225000)" />
-            </div>
+            <input style={inputStyle} value={pastedLoc} onChange={(e) => handlePasteLoc(e.target.value)}
+              placeholder='Tempelkan link Google Maps atau koordinat (mis. -8.375000, 115.225000)' />
+            <p style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '6px' }}>
+              Buka Google Maps → klik kanan titik lokasi → salin koordinat → tempel di sini. Atau tempel seluruh link Google Maps.
+            </p>
             <button
               onClick={handleGetLocation}
               disabled={locating}
@@ -249,7 +273,7 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
               {locating ? 'Mengambil lokasi...' : 'Ambil Lokasi Saya (GPS)'}
             </button>
             <p style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '6px' }}>
-              Klik tombol untuk otomatis mengisi koordinat dari perangkat, atau isi manual.
+              Atau klik tombol untuk otomatis mengisi koordinat dari perangkat.
             </p>
           </div>
 
