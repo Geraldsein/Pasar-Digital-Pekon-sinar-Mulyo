@@ -20,11 +20,17 @@ ${note ? `- *Catatan*: ${note}` : ''}
 Mohon konfirmasi ketersediaan barang. Terima kasih!`;
 
     const encodedMessage = encodeURIComponent(message);
-    // Normalize phone: keep digits only, ensure 62 prefix
+    // Normalize phone: keep digits only
     let phone = String(product.sellerPhone || '').replace(/\D/g, '');
+    // Invalid if too short (Indonesian numbers are at least 9 digits + 62 = 11)
+    const valid = phone.length >= 10 && phone.length <= 15;
+    if (!valid) {
+      alert('Nomor WhatsApp penjual tidak tersedia. Hubungi penjual langsung.');
+      onClose();
+      return;
+    }
     if (phone.startsWith('0')) phone = '62' + phone.slice(1);
     if (!phone.startsWith('62')) phone = '62' + phone;
-    if (!phone) { onClose(); return; }
     const waUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
     window.open(waUrl, '_blank');
     onClose();
