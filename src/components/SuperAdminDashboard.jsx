@@ -126,17 +126,15 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
       if (!supabase || !isSupabaseConfigured) {
         throw new Error('Supabase belum dikonfigurasi.');
       }
-      // Insert ke admin_users (role detector)
-      // NOTE: Auth user harus dibuat via Supabase Dashboard/Edge Function
-      // (service role tidak boleh di client). Admin login via signUp biasa.
-      const { error } = await supabase.from('admin_users').insert([{ email, role: 'admin' }]);
-      if (error) {
-        if (error.message?.includes('duplicate') || error.code === '23505') {
-          setErrorMsg(`Email ${email} sudah terdaftar sebagai admin.`);
-          setActionLoading(false);
-          return;
-        }
-        throw error;
+      // Buat akun admin via Edge Function (service role di server, aman)
+      const res = await supabase.functions.invoke('create_admin', {
+        body: { email, password: pwd },
+      });
+      if (res.error) {
+        throw new Error(res.error.message || 'Gagal membuat akun admin.');
+      }
+      if (res.data?.error) {
+        throw new Error(res.data.error);
       }
 
       setSuccessMsg(`✅ Admin berhasil dibuat!\n\nKredensial untuk admin:\n• Email: ${email}\n• Password: ${pwd}\n\nAkun sudah aktif — admin dapat langsung login.`);
