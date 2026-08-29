@@ -1,7 +1,37 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Store } from 'lucide-react';
 import BaseModal from "./ui/BaseModal";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { MAX_NAME_LENGTH, MAX_NIB_LENGTH } from "../lib/utils";
+
+// Throttle percobaan login. Disimpan di localStorage supaya tidak hilang saat
+// modal ditutup atau halaman dimuat ulang. Ini hanya lapisan UX — penegakan
+// sebenarnya tetap pada rate limit Supabase Auth di sisi server.
+const THROTTLE_KEY = 'umkm-login-throttle';
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 60_000;
+
+const readThrottle = () => {
+  try {
+    const raw = localStorage.getItem(THROTTLE_KEY);
+    if (!raw) return { attempts: 0, lockedUntil: 0 };
+    const parsed = JSON.parse(raw);
+    return {
+      attempts: Number(parsed.attempts) || 0,
+      lockedUntil: Number(parsed.lockedUntil) || 0,
+    };
+  } catch {
+    return { attempts: 0, lockedUntil: 0 };
+  }
+};
+
+const writeThrottle = (state) => {
+  try {
+    localStorage.setItem(THROTTLE_KEY, JSON.stringify(state));
+  } catch {
+    // Penyimpanan tidak tersedia (mode privat/kuota penuh) — abaikan.
+  }
+};
 
 export default function AuthModal({ onClose, onAuthSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -17,8 +47,6 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
-  const failedAttempts = useRef(0);
-  const lockedUntil = useRef(0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,9 +56,10 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
 
     try {
       if (isLogin) {
+        const throttle = readThrottle();
         const now = Date.now();
-        if (now < lockedUntil.current) {
-          const wait = Math.ceil((lockedUntil.current - now) / 1000);
+        if (now < throttle.lockedUntil) {
+          const wait = Math.ceil((throttle.lockedUntil - now) / 1000);
           throw new Error(`Terlalu banyak percobaan gagal. Coba lagi dalam ${wait} detik.`);
         }
 
@@ -49,15 +78,16 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
         });
 
         if (error) {
-          failedAttempts.current += 1;
-          if (failedAttempts.current >= 5) {
-            lockedUntil.current = Date.now() + 60_000;
-            failedAttempts.current = 0;
+          const attempts = throttle.attempts + 1;
+          if (attempts >= MAX_ATTEMPTS) {
+            writeThrottle({ attempts: 0, lockedUntil: Date.now() + LOCKOUT_MS });
+          } else {
+            writeThrottle({ attempts, lockedUntil: 0 });
           }
           throw new Error('Email atau password salah.');
         }
         if (data.user) {
-          failedAttempts.current = 0;
+          writeThrottle({ attempts: 0, lockedUntil: 0 });
           // Role will be determined by App.jsx via detectUserRole
           if (onAuthSuccess) onAuthSuccess(data.user);
         }
@@ -70,6 +100,12 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
         }
         if (password.length < 12) {
           throw new Error('Password minimal 12 karakter');
+        }
+        if (fullName.length > MAX_NAME_LENGTH || businessName.length > MAX_NAME_LENGTH) {
+          throw new Error(`Nama maksimal ${MAX_NAME_LENGTH} karakter`);
+        }
+        if (nib.length > MAX_NIB_LENGTH) {
+          throw new Error(`NIB maksimal ${MAX_NIB_LENGTH} karakter`);
         }
 
         const { data, error } = await supabase.auth.signUp({
@@ -182,7 +218,7 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
                 Nama Lengkap
               </label>
               <input
-                type="text" id="fullName" required
+                type="text" id="fullName" required maxLength={MAX_NAME_LENGTH}
                 placeholder="Nama lengkap Anda"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -198,7 +234,7 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
                   Nama UMKM / Toko
                 </label>
                 <input
-                  type="text" id="businessName" required
+                  type="text" id="businessName" required maxLength={MAX_NAME_LENGTH}
                   placeholder="Nama usaha Anda"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
@@ -212,7 +248,7 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
                     NIB
                   </label>
                   <input
-                    type="text" id="nib"
+                    type="text" id="nib" maxLength={MAX_NIB_LENGTH}
                     placeholder="Nomor Induk Berusaha"
                     value={nib}
                     onChange={(e) => setNib(e.target.value)}
@@ -226,7 +262,7 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
                   <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden' }}>
                     <span style={{ padding: '12px 0 12px 14px', fontSize: '0.9rem', color: '#94A3B8', fontWeight: 600, userSelect: 'none', background: '#F8FAFC', borderRight: '1px solid #E2E8F0' }}>+62</span>
                     <input
-                      type="tel" id="phoneSuffix" required
+                      type="tel" id="phoneSuffix" required maxLength={15}
                       placeholder="81234567890"
                       value={phoneSuffix}
                       onChange={(e) => setPhoneSuffix(e.target.value.replace(/\D/g, ''))}
@@ -259,6 +295,7 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
               type={showPassword ? 'text' : 'password'}
               id="password"
               required
+              minLength={isLogin ? undefined : 12}
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

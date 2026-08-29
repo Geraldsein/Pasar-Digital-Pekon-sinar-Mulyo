@@ -69,6 +69,8 @@ export default function LocationModal({ product, onClose }) {
             marginHeight="0"
             marginWidth="0"
             src={mapEmbedUrl}
+            sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+            referrerPolicy="no-referrer"
             style={{ border: 0 }}
           />
           <div className="map-badge">

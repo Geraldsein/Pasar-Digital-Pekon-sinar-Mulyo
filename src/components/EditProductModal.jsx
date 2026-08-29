@@ -1,6 +1,17 @@
 import React, { useState, useRef } from "react";
 import { X, AlertCircle, Save, UploadCloud, Trash2, Link as LinkIcon } from "lucide-react";
-import { ALLOWED_IMAGE_TYPES, safeImageUrl } from "../lib/utils";
+import {
+  ALLOWED_IMAGE_TYPES,
+  MAX_IMAGE_BYTES,
+  MAX_TITLE_LENGTH,
+  MAX_DESC_LENGTH,
+  MAX_UNIT_LENGTH,
+  MAX_TAG_LENGTH,
+  MAX_NAME_LENGTH,
+  MAX_PRICE,
+  safeImageUrl,
+} from "../lib/utils";
+import { uploadImageToStorage } from "../lib/supabase";
 
 export default function EditProductModal({ product, categories, onClose, onProductUpdated }) {
   const [title, setTitle] = useState(product.title);
@@ -16,6 +27,7 @@ export default function EditProductModal({ product, categories, onClose, onProdu
 
   // Image states
   const [uploadMode, setUploadMode] = useState("url");
+  const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [imageUrlInput, setImageUrlInput] = useState(product.image);
   const [isDragging, setIsDragging] = useState(false);
@@ -29,14 +41,18 @@ export default function EditProductModal({ product, categories, onClose, onProdu
 
   const handleFileSelected = (file) => {
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) { setErrorMsg("Format gambar harus JPG, PNG, atau WEBP."); return; }
-    if (file.size > 5 * 1024 * 1024) { setErrorMsg("Ukuran gambar maksimal 5MB."); return; }
+    if (file.size > MAX_IMAGE_BYTES) { setErrorMsg("Ukuran gambar maksimal 5MB."); return; }
     setErrorMsg("");
-    const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
-    reader.readAsDataURL(file);
+    setImageFile(file);
+    // Preview lokal saja; yang disimpan ke DB nanti adalah URL hasil upload.
+    setImagePreview(URL.createObjectURL(file));
   };
 
-  const handleRemoveImage = () => { setImagePreview(""); if (fileInputRef.current) fileInputRef.current.value = ""; };
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,13 +62,17 @@ export default function EditProductModal({ product, categories, onClose, onProdu
     try {
       if (!title || !price || !desc) throw new Error("Nama produk, harga, dan deskripsi harus diisi.");
       if (Number(price) <= 0) throw new Error("Harga harus lebih dari 0.");
-      if (Number(price) > 1_000_000_000) throw new Error("Harga maksimal Rp 1.000.000.000.");
-      if (title.length > 120) throw new Error("Nama produk maksimal 120 karakter.");
-      if (desc.length > 2000) throw new Error("Deskripsi maksimal 2000 karakter.");
+      if (Number(price) > MAX_PRICE) throw new Error("Harga maksimal Rp 1.000.000.000.");
+      if (title.length > MAX_TITLE_LENGTH) throw new Error(`Nama produk maksimal ${MAX_TITLE_LENGTH} karakter.`);
+      if (desc.length > MAX_DESC_LENGTH) throw new Error(`Deskripsi maksimal ${MAX_DESC_LENGTH} karakter.`);
+      if (unit.length > MAX_UNIT_LENGTH) throw new Error(`Satuan maksimal ${MAX_UNIT_LENGTH} karakter.`);
+      if (tag.length > MAX_TAG_LENGTH) throw new Error(`Tag maksimal ${MAX_TAG_LENGTH} karakter.`);
+      if (sellerName.length > MAX_NAME_LENGTH) throw new Error(`Nama penjual maksimal ${MAX_NAME_LENGTH} karakter.`);
 
       let finalImage = product.image;
-      if (uploadMode === "file" && imagePreview) {
-        finalImage = imagePreview;
+      if (uploadMode === "file" && imageFile) {
+        // Gambar diunggah ke Storage; data URL tidak pernah masuk ke database.
+        finalImage = await uploadImageToStorage(imageFile);
       } else if (uploadMode === "url" && imageUrlInput.trim()) {
         finalImage = safeImageUrl(imageUrlInput.trim(), null);
         if (!finalImage) throw new Error("URL gambar harus diawali https://");
@@ -92,7 +112,7 @@ export default function EditProductModal({ product, categories, onClose, onProdu
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: "14px" }}>
             <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>Nama Produk</label>
-            <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)}
+            <input type="text" required maxLength={MAX_TITLE_LENGTH} value={title} onChange={(e) => setTitle(e.target.value)}
               style={{ width: "100%", padding: "9px 12px", border: "1px solid #CBD5E1", borderRadius: "8px", fontSize: "0.9rem" }} />
           </div>
 
@@ -106,7 +126,7 @@ export default function EditProductModal({ product, categories, onClose, onProdu
             </div>
             <div>
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>Tag (Opsional)</label>
-              <input type="text" placeholder="Terlaris, Baru" value={tag} onChange={(e) => setTag(e.target.value)}
+              <input type="text" placeholder="Terlaris, Baru" maxLength={MAX_TAG_LENGTH} value={tag} onChange={(e) => setTag(e.target.value)}
                 style={{ width: "100%", padding: "9px 12px", border: "1px solid #CBD5E1", borderRadius: "8px", fontSize: "0.9rem" }} />
             </div>
           </div>
@@ -114,12 +134,12 @@ export default function EditProductModal({ product, categories, onClose, onProdu
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px", marginBottom: "14px" }}>
             <div>
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>Harga (Rp)</label>
-              <input type="number" required min={0} value={price} onChange={(e) => setPrice(e.target.value)}
+              <input type="number" required min={1} max={MAX_PRICE} value={price} onChange={(e) => setPrice(e.target.value)}
                 style={{ width: "100%", padding: "9px 12px", border: "1px solid #CBD5E1", borderRadius: "8px", fontSize: "0.9rem" }} />
             </div>
             <div>
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>Satuan</label>
-              <input type="text" required value={unit} onChange={(e) => setUnit(e.target.value)}
+              <input type="text" required maxLength={MAX_UNIT_LENGTH} value={unit} onChange={(e) => setUnit(e.target.value)}
                 style={{ width: "100%", padding: "9px 12px", border: "1px solid #CBD5E1", borderRadius: "8px", fontSize: "0.9rem" }} />
             </div>
           </div>
@@ -127,14 +147,14 @@ export default function EditProductModal({ product, categories, onClose, onProdu
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
             <div>
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>Nama Penjual</label>
-              <input type="text" required value={sellerName} onChange={(e) => setSellerName(e.target.value)}
+              <input type="text" required maxLength={MAX_NAME_LENGTH} value={sellerName} onChange={(e) => setSellerName(e.target.value)}
                 style={{ width: "100%", padding: "9px 12px", border: "1px solid #CBD5E1", borderRadius: "8px", fontSize: "0.9rem" }} />
             </div>
             <div>
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>No. WhatsApp</label>
               <div style={{ display: "flex", alignItems: "center", border: "1px solid #CBD5E1", borderRadius: "8px", overflow: "hidden" }}>
                 <span style={{ padding: "9px 0 9px 12px", fontSize: "0.9rem", color: "#94A3B8", fontWeight: 600, userSelect: "none", background: "#F8FAFC", borderRight: "1px solid #E2E8F0" }}>+62</span>
-                <input type="text" required placeholder="xxxxxxxxxxx" value={phoneSuffix} onChange={(e) => setPhoneSuffix(e.target.value.replace(/\D/g, ""))}
+                <input type="text" required maxLength={15} placeholder="xxxxxxxxxxx" value={phoneSuffix} onChange={(e) => setPhoneSuffix(e.target.value.replace(/\D/g, ""))}
                   style={{ width: "100%", padding: "9px 12px", border: "none", fontSize: "0.9rem", outline: "none" }} />
               </div>
             </div>
@@ -164,7 +184,7 @@ export default function EditProductModal({ product, categories, onClose, onProdu
               <div>
                 {imagePreview ? (
                   <div style={{ position: "relative", borderRadius: "10px", overflow: "hidden", border: "1px solid #CBD5E1", height: "160px", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <img src={imagePreview} alt="Preview" style={{ height: "100%", width: "100%", objectFit: "cover" }} />
+                    <img src={safeImageUrl(imagePreview)} alt="Preview" style={{ height: "100%", width: "100%", objectFit: "cover" }} />
                     <button type="button" onClick={handleRemoveImage} title="Hapus gambar" style={{
                       position: "absolute", top: "8px", right: "8px", background: "rgba(239, 68, 68, 0.9)", color: "white",
                       border: "none", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer",
@@ -201,7 +221,7 @@ export default function EditProductModal({ product, categories, onClose, onProdu
 
           <div style={{ marginBottom: "20px" }}>
             <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>Deskripsi</label>
-            <textarea rows={3} required value={desc} onChange={(e) => setDesc(e.target.value)}
+            <textarea rows={3} required maxLength={MAX_DESC_LENGTH} value={desc} onChange={(e) => setDesc(e.target.value)}
               style={{ width: "100%", padding: "9px 12px", border: "1px solid #CBD5E1", borderRadius: "8px", fontSize: "0.9rem", outline: "none" }} />
           </div>
 

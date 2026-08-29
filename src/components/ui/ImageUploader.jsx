@@ -1,47 +1,53 @@
 import React, { useRef, useState } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
-import { ALLOWED_IMAGE_TYPES, safeImageUrl } from '../../lib/utils';
+import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, safeImageUrl } from '../../lib/utils';
+import { uploadImageToStorage } from '../../lib/supabase';
 
 /**
  * Komponen upload gambar dengan drag-and-drop dan pilih file.
- * Mengembalikan base64 string via onChange(base64String).
- * Jika value sudah ada (URL atau base64), tampilkan preview.
+ * Gambar diunggah ke Supabase Storage dan onChange menerima public URL-nya,
+ * bukan data URL base64 — supaya baris database tidak membengkak dan setiap
+ * pengunjung tidak ikut mengunduh gambar berukuran megabyte.
  */
 export default function ImageUploader({ value, onChange, label, disabled = false, accept = 'image/jpeg,image/png,image/webp' }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
 
-  const processFile = (file) => {
+  const processFile = async (file) => {
     setError('');
     if (!file) return;
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       setError('Format gambar harus JPG, PNG, atau WEBP.');
       return;
     }
-    const MAX_MB = 5;
-    if (file.size > MAX_MB * 1024 * 1024) {
-      setError(`Ukuran file maksimal ${MAX_MB}MB.`);
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError('Ukuran file maksimal 5MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      onChange(e.target.result);
-    };
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      const publicUrl = await uploadImageToStorage(file);
+      onChange(publicUrl);
+    } catch (err) {
+      setError(err.message || 'Gagal mengunggah gambar.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setDragging(false);
-    if (disabled) return;
+    if (disabled || uploading) return;
     const file = e.dataTransfer.files?.[0];
     processFile(file);
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
-    if (!disabled) setDragging(true);
+    if (!disabled && !uploading) setDragging(true);
   };
 
   const handleDragLeave = () => setDragging(false);
@@ -58,7 +64,7 @@ export default function ImageUploader({ value, onChange, label, disabled = false
     setError('');
   };
 
-  const hasImage = value && (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('blob:'));
+  const hasImage = Boolean(value) && safeImageUrl(value, null) !== null;
 
   const borderColor = dragging ? '#7C3AED' : disabled ? '#E2E8F0' : '#CBD5E1';
   const bg = dragging ? '#F5F3FF' : disabled ? '#F8FAFC' : '#FAFBFC';
@@ -72,7 +78,7 @@ export default function ImageUploader({ value, onChange, label, disabled = false
       )}
 
       <div
-        onClick={() => !disabled && inputRef.current?.click()}
+        onClick={() => !disabled && !uploading && inputRef.current?.click()}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -141,11 +147,11 @@ export default function ImageUploader({ value, onChange, label, disabled = false
             </div>
             <div style={{ textAlign: 'center', padding: '0 12px 12px' }}>
               <div style={{ fontSize: '0.85rem', fontWeight: 600, color: disabled ? '#94A3B8' : '#1E293B' }}>
-                {disabled ? 'Upload gambar tidak tersedia' : 'Seret & lepas gambar di sini'}
+                {uploading ? 'Mengunggah gambar...' : disabled ? 'Upload gambar tidak tersedia' : 'Seret & lepas gambar di sini'}
               </div>
-              {!disabled && (
+              {!disabled && !uploading && (
                 <div style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '2px' }}>
-                  atau <span style={{ color: '#7C3AED', fontWeight: 600 }}>pilih dari file</span> · Maks. 5MB
+                  atau <span style={{ color: '#7C3AED', fontWeight: 600 }}>pilih dari file</span> · JPG/PNG/WEBP · Maks. 5MB
                 </div>
               )}
             </div>
@@ -158,7 +164,7 @@ export default function ImageUploader({ value, onChange, label, disabled = false
           accept={accept}
           onChange={handleFileChange}
           style={{ display: 'none' }}
-          disabled={disabled}
+          disabled={disabled || uploading}
         />
       </div>
 

@@ -1,7 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import { UploadCloud } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "../lib/supabase";
-import { ALLOWED_IMAGE_TYPES, IMAGE_EXT_BY_TYPE, safeImageUrl } from "../lib/utils";
+import { supabase, isSupabaseConfigured, uploadImageToStorage } from "../lib/supabase";
+import {
+  ALLOWED_IMAGE_TYPES,
+  MAX_IMAGE_BYTES,
+  MAX_TITLE_LENGTH,
+  MAX_DESC_LENGTH,
+  MAX_UNIT_LENGTH,
+  MAX_TAG_LENGTH,
+  MAX_NAME_LENGTH,
+  MAX_NIB_LENGTH,
+  MAX_LOCATION_LENGTH,
+  MAX_PRICE,
+  safeImageUrl,
+} from "../lib/utils";
 
 export default function AddProductModal({
   categories,
@@ -104,7 +116,7 @@ export default function AddProductModal({
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_IMAGE_BYTES) {
       setErrorMsg("Ukuran gambar maksimal adalah 5MB.");
       return;
     }
@@ -112,12 +124,8 @@ export default function AddProductModal({
     setErrorMsg("");
     setImageFile(file);
 
-    // Create local preview URL
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
+    // Preview lokal; yang disimpan ke database adalah URL hasil upload storage.
+    setImagePreview(URL.createObjectURL(file));
   };
 
   const handleRemoveImage = () => {
@@ -138,53 +146,40 @@ export default function AddProductModal({
       if (Number(price) <= 0) {
         throw new Error("Harga harus lebih dari 0.");
       }
-      if (Number(price) > 1_000_000_000) {
+      if (Number(price) > MAX_PRICE) {
         throw new Error("Harga maksimal Rp 1.000.000.000.");
       }
-      if (title.length > 120) {
-        throw new Error("Nama produk maksimal 120 karakter.");
+      if (title.length > MAX_TITLE_LENGTH) {
+        throw new Error(`Nama produk maksimal ${MAX_TITLE_LENGTH} karakter.`);
       }
-      if (desc.length > 2000) {
-        throw new Error("Deskripsi maksimal 2000 karakter.");
+      if (desc.length > MAX_DESC_LENGTH) {
+        throw new Error(`Deskripsi maksimal ${MAX_DESC_LENGTH} karakter.`);
+      }
+      if (unit.length > MAX_UNIT_LENGTH) {
+        throw new Error(`Satuan maksimal ${MAX_UNIT_LENGTH} karakter.`);
+      }
+      if (tag.length > MAX_TAG_LENGTH) {
+        throw new Error(`Tag maksimal ${MAX_TAG_LENGTH} karakter.`);
+      }
+      if (businessName.length > MAX_NAME_LENGTH || sellerName.length > MAX_NAME_LENGTH) {
+        throw new Error(`Nama usaha/penjual maksimal ${MAX_NAME_LENGTH} karakter.`);
+      }
+      if (nib.length > MAX_NIB_LENGTH) {
+        throw new Error(`NIB maksimal ${MAX_NIB_LENGTH} karakter.`);
+      }
+      if (location.length > MAX_LOCATION_LENGTH) {
+        throw new Error(`Alamat maksimal ${MAX_LOCATION_LENGTH} karakter.`);
       }
 
       let finalImageUrl =
         "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80";
 
-      // Upload image to Supabase Storage if configured
+      // Gambar wajib lewat Supabase Storage. Fallback base64 dihapus: menyimpan
+      // data URL berukuran megabyte ke kolom image membuat setiap pengunjung
+      // ikut mengunduhnya dan melewati seluruh kontrol di sisi storage.
       if (uploadMode === "file" && imageFile) {
         setUploadProgress("Mengunggah gambar...");
-
-        if (supabase && isSupabaseConfigured) {
-          try {
-            const fileExt = IMAGE_EXT_BY_TYPE[imageFile.type] || 'jpg';
-            const fileName = `${Date.now()}_${crypto.randomUUID()}.${fileExt}`;
-            const filePath = `product-images/${fileName}`;
-
-            const { data: uploadData, error: uploadError } =
-              await supabase.storage
-                .from("products")
-                .upload(filePath, imageFile, { upsert: false, contentType: imageFile.type });
-
-            if (!uploadError && uploadData) {
-              const { data: publicUrlData } = supabase.storage
-                .from("products")
-                .getPublicUrl(filePath);
-
-              if (publicUrlData && publicUrlData.publicUrl) {
-                finalImageUrl = publicUrlData.publicUrl;
-              }
-            } else {
-              if (import.meta.env.DEV) console.warn("Storage upload gagal:", uploadError);
-              finalImageUrl = imagePreview;
-            }
-          } catch (storageErr) {
-            if (import.meta.env.DEV) console.warn("Storage upload gagal:", storageErr);
-            finalImageUrl = imagePreview;
-          }
-        } else {
-          finalImageUrl = imagePreview;
-        }
+        finalImageUrl = await uploadImageToStorage(imageFile);
       } else if (uploadMode === "url" && imageUrlInput.trim()) {
         const safeUrl = safeImageUrl(imageUrlInput.trim(), null);
         if (!safeUrl) throw new Error("URL gambar harus diawali https://");
@@ -268,7 +263,10 @@ export default function AddProductModal({
         .select("*");
 
       if (error) {
-        throw new Error(error.message || 'Gagal menambahkan produk.');
+        // Detail error Supabase (nama tabel/kolom/kode Postgres) tidak
+        // ditampilkan ke pengguna; hanya di-log saat mode pengembangan.
+        if (import.meta.env.DEV) console.warn('Insert produk gagal:', error);
+        throw new Error('Gagal menambahkan produk. Periksa data lalu coba lagi.');
       }
       if (onProductAdded && data && data[0]) {
         onProductAdded({ ...data[0], sellerName: data[0].seller_name, sellerPhone: data[0].seller_phone, businessName: data[0].business_name });
@@ -383,6 +381,7 @@ export default function AddProductModal({
             <input
               type="text"
               required
+              maxLength={MAX_TITLE_LENGTH}
               placeholder="Misal: Keripik Singkong Balado Khas Desa"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -447,6 +446,7 @@ export default function AddProductModal({
               </label>
               <input
                 type="text"
+                maxLength={MAX_TAG_LENGTH}
                 placeholder="Misal: Terlaris, Baru"
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
@@ -483,7 +483,8 @@ export default function AddProductModal({
               <input
                 type="number"
                 required
-                min={0}
+                min={1}
+                max={MAX_PRICE}
                 placeholder="Misal: 25000"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
@@ -511,6 +512,7 @@ export default function AddProductModal({
               <input
                 type="text"
                 required
+                maxLength={MAX_UNIT_LENGTH}
                 placeholder="/pcs, /kg, /buah"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
@@ -542,6 +544,7 @@ export default function AddProductModal({
                   <input
                     type='text'
                     required
+                    maxLength={MAX_NAME_LENGTH}
                     placeholder='Nama usaha UMKM'
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
@@ -555,6 +558,7 @@ export default function AddProductModal({
                   </label>
                   <input
                     type='text'
+                    maxLength={MAX_NIB_LENGTH}
                     placeholder='Nomor Induk Berusaha (opsional)'
                     value={nib}
                     onChange={(e) => setNib(e.target.value)}
@@ -578,6 +582,7 @@ export default function AddProductModal({
                   <input
                     type='text'
                     required
+                    maxLength={MAX_NAME_LENGTH}
                     placeholder='Nama pemilik UMKM'
                     value={sellerName}
                     onChange={(e) => setSellerName(e.target.value)}
@@ -592,7 +597,7 @@ export default function AddProductModal({
                   <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #CBD5E1', borderRadius: '8px', overflow: 'hidden' }}>
                     <span style={{ padding: '9px 0 9px 12px', fontSize: '0.9rem', color: '#94A3B8', fontWeight: 600, userSelect: 'none', background: '#F8FAFC', borderRight: '1px solid #E2E8F0' }}>+62</span>
                     <input
-                      type='tel' required placeholder='81234567890'
+                      type='tel' required maxLength={15} placeholder='81234567890'
                       value={phoneSuffix}
                       onChange={(e) => setPhoneSuffix(e.target.value.replace(/\D/g, ''))}
                       style={{ flex: 1, padding: '9px 12px', border: 'none', fontSize: '0.9rem', outline: 'none' }}
@@ -607,6 +612,7 @@ export default function AddProductModal({
                 </label>
                 <textarea
                   rows={2}
+                  maxLength={MAX_LOCATION_LENGTH}
                   placeholder='Dusun, Desa, Kecamatan, Kabupaten...'
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
@@ -700,7 +706,7 @@ export default function AddProductModal({
                     }}
                   >
                     <img
-                      src={imagePreview}
+                      src={safeImageUrl(imagePreview)}
                       alt="Preview Produk"
                       style={{
                         height: "100%",
@@ -882,6 +888,7 @@ export default function AddProductModal({
             <textarea
               rows={3}
               required
+              maxLength={MAX_DESC_LENGTH}
               placeholder="Penjelasan keunggulan dan kearifan lokal produk..."
               value={desc}
               onChange={(e) => setDesc(e.target.value)}

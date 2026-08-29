@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, MessageSquare, MapPin, CheckCircle2, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import { formatRupiah, sanitizeText, safeImageUrl } from '../lib/utils';
-import LoadingSkeleton from './ui/LoadingSkeleton';
+import { formatRupiah, sanitizeText, safeImageUrl } from '../lib/utils';import LoadingSkeleton from './ui/LoadingSkeleton';
 
 export default function ProductSection({ products, onBuyProduct, onOpenLocation, activeCategoryName, searchQuery }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -94,7 +93,7 @@ export default function ProductSection({ products, onBuyProduct, onOpenLocation,
 
                   <div className="product-seller">
                     <div className="seller-avatar">
-                      {sanitizeText(item.sellerName.charAt(0))}
+                      {sanitizeText((item.sellerName ?? '').charAt(0))}
                     </div>
                     <span className="seller-name">
                       {sanitizeText(item.sellerName)}

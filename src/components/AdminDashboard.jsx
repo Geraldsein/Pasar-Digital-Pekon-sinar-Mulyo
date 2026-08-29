@@ -5,6 +5,7 @@ import DashboardLayout from './ui/DashboardLayout';
 import StatCard from './ui/StatCard';
 import EditProductModal from './EditProductModal';
 import { buildUmkmList, safeImageUrl } from '../lib/utils';
+import { changePasswordWithReauth } from '../lib/supabase';
 
 export default function AdminDashboard({ products, categories, onVerifyProduct, onDeleteProduct, onProductUpdated, onAddProduct, onBack, currentUser, frozenUmkm = [], onToggleFreezeUmkm, onDeleteUmkm, siteContent = {}, onSaveSiteContent }) {
   const [activePanel, setActivePanel] = useState('dashboard');
@@ -82,6 +83,8 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
   const [settingsMsg, setSettingsMsg] = useState('');
   const [isEditingSettings, setIsEditingSettings] = useState(false);
   const [originalSettingsForm, setOriginalSettingsForm] = useState(null);
+  const [pwCurrent, setPwCurrent] = useState('');
+  const [umkmErr, setUmkmErr] = useState('');
   const [pwNew, setPwNew] = useState('');
   const [pwConfirm, setPwConfirm] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
@@ -278,14 +281,15 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
     e.preventDefault();
     setPwErr("");
     setPwMsg("");
-    if (!pwNew || !pwConfirm) { setPwErr("Semua field harus diisi."); return; }
+    if (!pwCurrent || !pwNew || !pwConfirm) { setPwErr("Semua field harus diisi."); return; }
     if (pwNew.length < 12) { setPwErr("Password minimal 12 karakter."); return; }
     if (pwNew !== pwConfirm) { setPwErr("Konfirmasi password tidak cocok."); return; }
+    if (pwNew === pwCurrent) { setPwErr("Password baru harus berbeda dari password saat ini."); return; }
     setPwLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: pwNew });
-      if (error) throw error;
-      setPwMsg("Password berhasil diubah.");
+      await changePasswordWithReauth(currentUser?.email, pwCurrent, pwNew);
+      setPwMsg("Password berhasil diubah. Sesi di perangkat lain telah dikeluarkan.");
+      setPwCurrent("");
       setPwNew("");
       setPwConfirm("");
     } catch (err) {
@@ -311,8 +315,12 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
       {pwErr && <div style={{ background: "#FEE2E2", color: "#991B1B", padding: "12px 14px", borderRadius: "8px", fontSize: "0.85rem", marginBottom: "16px" }}>{pwErr}</div>}
       <form onSubmit={handleChangePassword} style={{ background: "white", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "24px" }}>
         <div style={{ marginBottom: "16px" }}>
+          <label style={pwLabelStyle}>Password Saat Ini</label>
+          <input type="password" required value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} placeholder="Password lama Anda" style={pwInputStyle} />
+        </div>
+        <div style={{ marginBottom: "16px" }}>
           <label style={pwLabelStyle}>Password Baru</label>
-          <input type="password" required value={pwNew} onChange={(e) => setPwNew(e.target.value)} placeholder="Minimal 6 karakter" style={pwInputStyle} />
+          <input type="password" required minLength={12} value={pwNew} onChange={(e) => setPwNew(e.target.value)} placeholder="Minimal 12 karakter" style={pwInputStyle} />
         </div>
         <div style={{ marginBottom: "20px" }}>
           <label style={pwLabelStyle}>Konfirmasi Password Baru</label>
@@ -514,6 +522,12 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
         Bekukan UMKM yang sudah tidak aktif/melanggar aturan. Produk dari UMKM yang dibekukan tidak tampil di katalog publik.
       </p>
 
+      {umkmErr && (
+        <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '12px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px' }}>
+          {umkmErr}
+        </div>
+      )}
+
       {umkmList.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
           <Store size={48} style={{ color: '#CBD5E1', marginBottom: '16px' }} />
@@ -554,7 +568,7 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
                   {umkm.frozen ? 'Dibekukan' : 'Aktif'}
                 </span>
                 <button
-                  onClick={() => onToggleFreezeUmkm && onToggleFreezeUmkm(umkm.key)}
+                  onClick={() => onToggleFreezeUmkm && onToggleFreezeUmkm(umkm.userId)}
                   style={{
                     padding: '8px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
                     border: umkm.frozen ? '1px solid #059669' : '1px solid #DC2626',
@@ -567,9 +581,13 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
                   {umkm.frozen ? 'Aktifkan' : 'Bekukan'}
                 </button>
                 <button
-                  onClick={() => {
-                    if (window.confirm('Apakah Anda yakin ingin menghapus akun UMKM ini? Semua produk terkait juga akan dihapus.')) {
-                      if (onDeleteUmkm) onDeleteUmkm(umkm.key);
+                  onClick={async () => {
+                    if (!window.confirm('Apakah Anda yakin ingin menghapus akun UMKM ini? Semua produk terkait juga akan dihapus.')) return;
+                    try {
+                      await onDeleteUmkm?.(umkm.userId);
+                      setUmkmErr('');
+                    } catch (err) {
+                      setUmkmErr(err.message || 'Gagal menghapus akun UMKM.');
                     }
                   }}
                   style={{

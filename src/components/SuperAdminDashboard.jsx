@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Package, ShieldCheck, ShieldAlert, Trash2, Edit3, PlusCircle, Mail, Calendar, Crown, Search, CheckCircle2, Box, Users, BarChart3, Store, Palette, Lock, Pencil, X } from 'lucide-react';
 import ImageUploader from './ui/ImageUploader';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, changePasswordWithReauth } from '../lib/supabase';
 import DashboardLayout from './ui/DashboardLayout';
 import StatCard from './ui/StatCard';
 import EditProductModal from './EditProductModal';
@@ -20,6 +20,8 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   
+  const [pwCurrent, setPwCurrent] = useState('');
+  const [umkmErr, setUmkmErr] = useState('');
   const [pwNew, setPwNew] = useState('');
   const [pwConfirm, setPwConfirm] = useState('');
   
@@ -245,6 +247,12 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
         Bekukan UMKM yang sudah tidak aktif/melanggar aturan. Produk dari UMKM yang dibekukan tidak tampil di katalog publik.
       </p>
 
+      {umkmErr && (
+        <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '12px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px' }}>
+          {umkmErr}
+        </div>
+      )}
+
       {umkmList.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
           <Store size={48} style={{ color: '#CBD5E1', marginBottom: '16px' }} />
@@ -285,9 +293,13 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
                   {umkm.frozen ? 'Dibekukan' : 'Aktif'}
                 </span>
                 <button
-                  onClick={() => {
-                    if (window.confirm('Apakah Anda yakin ingin menghapus akun UMKM ini? Semua produk terkait juga akan dihapus.')) {
-                      onDeleteUmkm?.(umkm.key);
+                  onClick={async () => {
+                    if (!window.confirm('Apakah Anda yakin ingin menghapus akun UMKM ini? Semua produk terkait juga akan dihapus.')) return;
+                    try {
+                      await onDeleteUmkm?.(umkm.userId);
+                      setUmkmErr('');
+                    } catch (err) {
+                      setUmkmErr(err.message || 'Gagal menghapus akun UMKM.');
                     }
                   }}
                   style={{
@@ -672,14 +684,14 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
     e.preventDefault();
     setPwErr('');
     setPwMsg('');
-    if (!pwNew || !pwConfirm) { setPwErr('Semua field harus diisi.'); return; }
+    if (!pwCurrent || !pwNew || !pwConfirm) { setPwErr('Semua field harus diisi.'); return; }
     if (pwNew.length < 12) { setPwErr('Password minimal 12 karakter.'); return; }
     if (pwNew !== pwConfirm) { setPwErr('Konfirmasi password tidak cocok.'); return; }
+    if (pwNew === pwCurrent) { setPwErr('Password baru harus berbeda dari password saat ini.'); return; }
     setPwLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: pwNew });
-      if (error) throw error;
-      setPwMsg('Password berhasil diubah.');
+      await changePasswordWithReauth(currentUser?.email, pwCurrent, pwNew);
+      setPwMsg('Password berhasil diubah. Sesi di perangkat lain telah dikeluarkan.');
       setPwCurrent('');
       setPwNew('');
       setPwConfirm('');
@@ -716,8 +728,12 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
 
       <form onSubmit={handleChangePassword} style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '24px' }}>
         <div style={{ marginBottom: '16px' }}>
+          <label style={pwLabelStyle}>Password Saat Ini</label>
+          <input type="password" required value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} placeholder="Password lama Anda" style={pwInputStyle} />
+        </div>
+        <div style={{ marginBottom: '16px' }}>
           <label style={pwLabelStyle}>Password Baru</label>
-          <input type="password" required value={pwNew} onChange={(e) => setPwNew(e.target.value)} placeholder="Minimal 6 karakter" style={pwInputStyle} />
+          <input type="password" required minLength={12} value={pwNew} onChange={(e) => setPwNew(e.target.value)} placeholder="Minimal 12 karakter" style={pwInputStyle} />
         </div>
         <div style={{ marginBottom: '20px' }}>
           <label style={pwLabelStyle}>Konfirmasi Password Baru</label>

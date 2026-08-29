@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import BaseModal from "./ui/BaseModal";
-import { safeImageUrl } from '../lib/utils';
+import { safeImageUrl, MAX_QUANTITY, MAX_NOTE_LENGTH } from '../lib/utils';
 
 export default function WhatsAppModal({ product, onClose }) {
   const [quantity, setQuantity] = useState(1);
@@ -9,7 +9,10 @@ export default function WhatsAppModal({ product, onClose }) {
 
   if (!product) return null;
 
-  const totalPrice = product.price * quantity;
+  // Harga bisa null pada baris yang tidak lengkap; tanpa guard ini satu baris
+  // rusak akan menggagalkan render seluruh modal.
+  const unitPrice = Number(product.price) || 0;
+  const totalPrice = unitPrice * quantity;
 
   const handleOpenWhatsApp = () => {
     const message = `Halo ${product.sellerName}, saya ingin memesan produk dari Portal UMKM Desa:
@@ -66,7 +69,7 @@ Mohon konfirmasi ketersediaan barang. Terima kasih!`;
                   <CheckCircle2 size={14} color="#2563EB" />
                 </div>
                 <div className="font-bold" style={{ fontSize: "0.95rem", color: "#1E40AF" }}>
-                  Rp {product.price.toLocaleString('id-ID')} {product.unit}
+                  Rp {unitPrice.toLocaleString('id-ID')} {product.unit}
                 </div>
               </div>
             </div>
@@ -83,7 +86,7 @@ Mohon konfirmasi ketersediaan barang. Terima kasih!`;
               </button>
               <span className="qty-value">{quantity}</span>
               <button
-                onClick={() => setQuantity(quantity + 1)}
+                onClick={() => setQuantity(Math.min(MAX_QUANTITY, quantity + 1))}
                 className="qty-btn"
               >
                 +
@@ -98,6 +101,7 @@ Mohon konfirmasi ketersediaan barang. Terima kasih!`;
               placeholder="Misal: Alamat pengiriman / varian warna..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
+              maxLength={MAX_NOTE_LENGTH}
               className="form-input"
             />
           </div>

@@ -18,6 +18,7 @@ import {
   CATEGORIES as INITIAL_CATEGORIES,
 } from "./data/products";
 import { supabase, isSupabaseConfigured, detectUserRole } from "./lib/supabase";
+import { SITE_CONTENT_KEYS, MAX_SITE_CONTENT_LENGTH } from "./lib/utils";
 
 export default function App() {
   const [categories, setCategories] = useState(INITIAL_CATEGORIES);
@@ -56,32 +57,79 @@ export default function App() {
         .select('phone, user_id, business_name, nib, frozen, created_at')
         .order('created_at', { ascending: false })
         .range(0, 199);
-      if (!error && data) setUmkmUsers(data);
+      if (!error && data) {
+        setUmkmUsers(data);
+        // Hidrasi status beku dari database agar pembekuan bertahan setelah reload.
+        setFrozenUmkm(data.filter((s) => s.frozen && s.user_id).map((s) => s.user_id));
+      }
     } catch (err) {
       if (import.meta.env.DEV) console.error('Error fetching UMKM users:', err);
     }
   };
 
   // ── Hapus akun UMKM ─────────────────────────────────────────────────────
-  const handleDeleteUmkmUser = async (userId, email) => {
+  // userId wajib berupa sellers.user_id; dashboard mengirim umkm.userId.
+  const handleDeleteUmkmUser = async (userId) => {
     if (!supabase || !isSupabaseConfigured) {
       throw new Error('Supabase belum dikonfigurasi.');
     }
-    // 1. Hapus produk milik user ini
-    const { error: productErr } = await supabase.from('products').delete().eq('user_id', userId);
+    if (!userId) {
+      throw new Error('Akun UMKM ini belum tertaut ke user_id, tidak dapat dihapus otomatis.');
+    }
+    // 1. Hapus produk milik user ini. .select() dipakai agar jumlah baris
+    //    terdampak bisa diperiksa — RLS yang menolak tidak memunculkan error.
+    const { error: productErr } = await supabase
+      .from('products')
+      .delete()
+      .eq('user_id', userId)
+      .select('id');
     if (productErr) throw new Error('Gagal menghapus produk UMKM ini.');
+
     // 2. Hapus dari tabel sellers (profil UMKM)
-    const { error: sellerErr } = await supabase.from('sellers').delete().eq('user_id', userId);
+    const { data: deletedSellers, error: sellerErr } = await supabase
+      .from('sellers')
+      .delete()
+      .eq('user_id', userId)
+      .select('user_id');
     if (sellerErr) throw new Error('Gagal menghapus profil UMKM ini.');
+    if (!deletedSellers || deletedSellers.length === 0) {
+      throw new Error('Tidak ada profil UMKM yang terhapus. Periksa izin akun Anda.');
+    }
+
     // Update state lokal
-    setUmkmUsers(prev => prev.filter(u => u.email !== email));
-    setProducts(prev => prev.filter(p => p.user_id !== userId && p.userEmail !== email));
+    setUmkmUsers((prev) => prev.filter((u) => u.user_id !== userId));
+    setProducts((prev) => prev.filter((p) => p.user_id !== userId));
+    setFrozenUmkm((prev) => prev.filter((k) => k !== userId));
   };
 
-  const handleToggleFreezeUmkm = (key) => {
-    setFrozenUmkm((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+  // Bekukan/aktifkan UMKM. Dipersistkan ke sellers.frozen supaya status
+  // bertahan setelah reload dan berlaku untuk semua pengunjung.
+  const handleToggleFreezeUmkm = async (userId) => {
+    if (!userId) {
+      alert('Akun UMKM ini belum tertaut ke user_id, status beku tidak dapat disimpan.');
+      return;
+    }
+    const nextFrozen = !frozenUmkm.includes(userId);
+    const snapshot = frozenUmkm;
+    setFrozenUmkm((prev) => (nextFrozen ? [...prev, userId] : prev.filter((k) => k !== userId)));
+
+    if (!supabase || !isSupabaseConfigured) return;
+    try {
+      const { data, error } = await supabase
+        .from('sellers')
+        .update({ frozen: nextFrozen })
+        .eq('user_id', userId)
+        .select('user_id');
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('no rows affected');
+      setUmkmUsers((prev) =>
+        prev.map((u) => (u.user_id === userId ? { ...u, frozen: nextFrozen } : u))
+      );
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('Toggle freeze failed:', err);
+      setFrozenUmkm(snapshot);
+      alert('Gagal menyimpan status beku UMKM. Perubahan dibatalkan.');
+    }
   };
 
   // Supabase Auth Listener & Session Check
@@ -170,15 +218,19 @@ export default function App() {
         // Fetch categories
         const { data: catData, error: catErr } = await supabase
           .from("categories")
-          .select("*");
+          .select("id, name, sub, icon, bg, color")
+          .range(0, 99);
         if (!catErr && catData && catData.length > 0) {
           setCategories(catData);
         }
 
-        // Fetch products
+        // Kolom disebut eksplisit agar payload katalog tidak membengkak dan
+        // kolom baru di DB tidak otomatis terkirim ke pengunjung anonim.
         const { data: prodData, error: prodErr } = await supabase
           .from("products")
-          .select("*")
+          .select(
+            "id, title, category, price, unit, tag, \"desc\", verified, status, image, seller_name, seller_phone, business_name, location, user_id, created_at"
+          )
           .order("id", { ascending: false })
           .range(0, 499);
         if (!prodErr && prodData) {
@@ -200,7 +252,8 @@ export default function App() {
       try {
         const { data: contentData } = await supabase
           .from("site_content")
-          .select("key, value");
+          .select("key, value")
+          .range(0, 49);
         if (contentData && contentData.length > 0) {
           const obj = {};
           contentData.forEach((row) => { obj[row.key] = row.value; });
@@ -308,15 +361,22 @@ export default function App() {
   const handleSaveSiteContent = async (content) => {
     if (!supabase || !isSupabaseConfigured) return;
     try {
-      const rows = Object.entries(content).map(([key, value]) => ({
-        key,
-        value: String(value),
-      }));
+      // Hanya key yang dikenal dan panjang terbatas yang boleh disimpan, supaya
+      // panel admin tidak bisa menyuntik key sembarangan atau payload raksasa
+      // yang lalu diunduh setiap pengunjung.
+      const rows = Object.entries(content)
+        .filter(([key]) => SITE_CONTENT_KEYS.includes(key))
+        .map(([key, value]) => ({
+          key,
+          value: String(value ?? '').slice(0, MAX_SITE_CONTENT_LENGTH),
+        }));
+      if (rows.length === 0) return;
       const { error } = await supabase
         .from('site_content')
         .upsert(rows, { onConflict: 'key' });
       if (error) throw error;
-      setSiteContent((prev) => ({ ...prev, ...content }));
+      const applied = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+      setSiteContent((prev) => ({ ...prev, ...applied }));
     } catch (err) {
       if (import.meta.env.DEV) console.warn('Save site content failed:', err);
       alert('Gagal menyimpan konten situs. Coba lagi.');
@@ -337,7 +397,8 @@ export default function App() {
           (item.sellerName ?? '').toLowerCase().includes(query)
         : true;
 
-      return isApproved && matchCategory && matchSearch && !frozenUmkm.includes(item.sellerPhone);
+      // frozenUmkm berisi user_id, sesuai key dari buildUmkmList dan sellers.frozen.
+      return isApproved && matchCategory && matchSearch && !frozenUmkm.includes(item.user_id);
     });
   }, [products, selectedCategory, searchQuery, frozenUmkm]);
 
@@ -411,6 +472,7 @@ export default function App() {
             currentUser={currentUser}
             frozenUmkm={frozenUmkm}
             onDeleteUmkm={handleDeleteUmkmUser}
+            umkmUsers={umkmUsers}
             onRefreshUmkmUsers={fetchUmkmUsers}
             siteContent={siteContent}
             onSaveSiteContent={handleSaveSiteContent}
@@ -522,33 +584,41 @@ export default function App() {
       <Footer onOpenAuth={() => setShowAuthModal(true)} />
 
       {selectedProduct && (
-        <WhatsAppModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-        />
+        <ErrorBoundary>
+          <WhatsAppModal
+            product={selectedProduct}
+            onClose={() => setSelectedProduct(null)}
+          />
+        </ErrorBoundary>
       )}
 
       {selectedLocationProduct && (
-        <LocationModal
-          product={selectedLocationProduct}
-          onClose={() => setSelectedLocationProduct(null)}
-        />
+        <ErrorBoundary>
+          <LocationModal
+            product={selectedLocationProduct}
+            onClose={() => setSelectedLocationProduct(null)}
+          />
+        </ErrorBoundary>
       )}
 
       {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          onAuthSuccess={handleAuthSuccess}
-        />
+        <ErrorBoundary>
+          <AuthModal
+            onClose={() => setShowAuthModal(false)}
+            onAuthSuccess={handleAuthSuccess}
+          />
+        </ErrorBoundary>
       )}
 
       {showAddProductModal && (
-        <AddProductModal
-          categories={categories}
-          currentUser={currentUser}
-          onClose={() => setShowAddProductModal(false)}
-          onProductAdded={handleProductAdded}
-        />
+        <ErrorBoundary>
+          <AddProductModal
+            categories={categories}
+            currentUser={currentUser}
+            onClose={() => setShowAddProductModal(false)}
+            onProductAdded={handleProductAdded}
+          />
+        </ErrorBoundary>
       )}
     </div>
   );
