@@ -52,7 +52,7 @@ export default function App() {
     try {
       if (!supabase || !isSupabaseConfigured) return;
       const { data, error } = await supabase
-        .from('umkm_users')
+        .from('sellers')
         .select('*')
         .order('created_at', { ascending: false });
       if (!error && data) setUmkmUsers(data);
@@ -67,10 +67,8 @@ export default function App() {
       if (!supabase || !isSupabaseConfigured) return;
       // 1. Hapus produk milik user ini
       await supabase.from('products').delete().eq('user_id', userId);
-      // 2. Hapus dari tabel umkm_users
-      await supabase.from('umkm_users').delete().eq('user_id', userId);
-      // 3. Hapus auth user via Supabase Dashboard / Edge Function
-      // (service role tidak boleh dipakai di client bundle)
+      // 2. Hapus dari tabel sellers (profil UMKM)
+      await supabase.from('sellers').delete().eq('user_id', userId);
       // Update state lokal
       setUmkmUsers(prev => prev.filter(u => u.email !== email));
       setProducts(prev => prev.filter(p => p.user_id !== userId && p.userEmail !== email));
