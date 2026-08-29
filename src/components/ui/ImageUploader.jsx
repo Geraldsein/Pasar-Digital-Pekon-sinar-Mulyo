@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { ALLOWED_IMAGE_TYPES, safeImageUrl } from '../../lib/utils';
 
 /**
  * Komponen upload gambar dengan drag-and-drop dan pilih file.
  * Mengembalikan base64 string via onChange(base64String).
  * Jika value sudah ada (URL atau base64), tampilkan preview.
  */
-export default function ImageUploader({ value, onChange, label, disabled = false, accept = 'image/*' }) {
+export default function ImageUploader({ value, onChange, label, disabled = false, accept = 'image/jpeg,image/png,image/webp' }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState('');
@@ -14,8 +15,8 @@ export default function ImageUploader({ value, onChange, label, disabled = false
   const processFile = (file) => {
     setError('');
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setError('File harus berupa gambar (JPG, PNG, WEBP, dll).');
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setError('Format gambar harus JPG, PNG, atau WEBP.');
       return;
     }
     const MAX_MB = 5;
@@ -94,7 +95,7 @@ export default function ImageUploader({ value, onChange, label, disabled = false
         {hasImage ? (
           <div style={{ width: '100%', position: 'relative' }}>
             <img
-              src={value}
+              src={safeImageUrl(value)}
               alt="Preview"
               onError={(e) => { e.target.style.display = 'none'; }}
               style={{ width: '100%', maxHeight: '180px', objectFit: 'cover', display: 'block', borderRadius: '8px' }}

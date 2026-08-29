@@ -34,6 +34,25 @@ const debounce = (func, delay = 300) => {
   };
 };
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+const IMAGE_EXT_BY_TYPE = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
+
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80';
+
+const safeImageUrl = (url, fallback = FALLBACK_IMAGE) => {
+  if (typeof url !== 'string') return fallback;
+  const value = url.trim();
+  if (/^https:\/\//i.test(value)) return value;
+  if (/^data:image\/(jpeg|png|webp);base64,/i.test(value)) return value;
+  if (/^blob:/i.test(value)) return value;
+  return fallback;
+};
+
 const buildUmkmList = (products, frozenUmkm = []) => {
   const map = {};
   (products || []).forEach((p) => {
@@ -61,4 +80,16 @@ const buildUmkmList = (products, frozenUmkm = []) => {
   return Object.values(map);
 };
 
-export { formatRupiah, sanitizeText, validateEmail, validatePhone, truncateText, debounce, buildUmkmList };
+export {
+  formatRupiah,
+  sanitizeText,
+  validateEmail,
+  validatePhone,
+  truncateText,
+  debounce,
+  buildUmkmList,
+  ALLOWED_IMAGE_TYPES,
+  IMAGE_EXT_BY_TYPE,
+  FALLBACK_IMAGE,
+  safeImageUrl,
+};

@@ -4,7 +4,7 @@ import ImageUploader from './ui/ImageUploader';
 import DashboardLayout from './ui/DashboardLayout';
 import StatCard from './ui/StatCard';
 import EditProductModal from './EditProductModal';
-import { buildUmkmList } from '../lib/utils';
+import { buildUmkmList, safeImageUrl } from '../lib/utils';
 
 export default function AdminDashboard({ products, categories, onVerifyProduct, onDeleteProduct, onProductUpdated, onAddProduct, onBack, currentUser, frozenUmkm = [], onToggleFreezeUmkm, onDeleteUmkm, siteContent = {}, onSaveSiteContent }) {
   const [activePanel, setActivePanel] = useState('dashboard');
@@ -279,7 +279,7 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
     setPwErr("");
     setPwMsg("");
     if (!pwNew || !pwConfirm) { setPwErr("Semua field harus diisi."); return; }
-    if (pwNew.length < 6) { setPwErr("Password minimal 6 karakter."); return; }
+    if (pwNew.length < 12) { setPwErr("Password minimal 12 karakter."); return; }
     if (pwNew !== pwConfirm) { setPwErr("Konfirmasi password tidak cocok."); return; }
     setPwLoading(true);
     try {
@@ -367,7 +367,7 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
           {filteredPending.map(product => (
             <div key={product.id} style={{ background: 'white', border: '1px solid #FDE68A', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(15, 44, 89, 0.08)' }}>
               <div style={{ height: '150px', background: '#F1F5F9', overflow: 'hidden' }}>
-                <img src={product.image || ''} alt={product.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={safeImageUrl(product.image)} alt={product.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <div style={{ padding: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
@@ -446,7 +446,7 @@ export default function AdminDashboard({ products, categories, onVerifyProduct, 
                 borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(15, 44, 89, 0.08)'
               }}>
                 <div style={{ height: '150px', background: '#F1F5F9', overflow: 'hidden' }}>
-                  <img src={product.image || ''} alt={product.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={safeImageUrl(product.image)} alt={product.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>

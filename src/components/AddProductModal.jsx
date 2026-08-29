@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { UploadCloud } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { ALLOWED_IMAGE_TYPES, IMAGE_EXT_BY_TYPE, safeImageUrl } from "../lib/utils";
 
 export default function AddProductModal({
   categories,
@@ -53,7 +54,7 @@ export default function AddProductModal({
           setSellerProfileReady(false);
         }
       } catch (e) {
-        console.warn("Gagal memuat profil penjual:", e);
+        if (import.meta.env.DEV) console.warn("Gagal memuat profil penjual:", e);
       }
     };
     loadSeller();
@@ -98,13 +99,8 @@ export default function AddProductModal({
   };
 
   const handleFileSelected = (file) => {
-    if (file.type === "image/svg+xml" || file.name.endsWith(".svg")) {
-      setErrorMsg("Format SVG tidak diizinkan. Gunakan JPG, PNG, atau WEBP.");
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      setErrorMsg("File harus berupa gambar (JPG, PNG, WEBP, dll).");
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setErrorMsg("Format gambar harus JPG, PNG, atau WEBP.");
       return;
     }
 
@@ -142,6 +138,15 @@ export default function AddProductModal({
       if (Number(price) <= 0) {
         throw new Error("Harga harus lebih dari 0.");
       }
+      if (Number(price) > 1_000_000_000) {
+        throw new Error("Harga maksimal Rp 1.000.000.000.");
+      }
+      if (title.length > 120) {
+        throw new Error("Nama produk maksimal 120 karakter.");
+      }
+      if (desc.length > 2000) {
+        throw new Error("Deskripsi maksimal 2000 karakter.");
+      }
 
       let finalImageUrl =
         "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80";
@@ -152,14 +157,14 @@ export default function AddProductModal({
 
         if (supabase && isSupabaseConfigured) {
           try {
-            const fileExt = imageFile.name.split(".").pop();
-            const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const fileExt = IMAGE_EXT_BY_TYPE[imageFile.type] || 'jpg';
+            const fileName = `${Date.now()}_${crypto.randomUUID()}.${fileExt}`;
             const filePath = `product-images/${fileName}`;
 
             const { data: uploadData, error: uploadError } =
               await supabase.storage
                 .from("products")
-                .upload(filePath, imageFile, { upsert: true });
+                .upload(filePath, imageFile, { upsert: false, contentType: imageFile.type });
 
             if (!uploadError && uploadData) {
               const { data: publicUrlData } = supabase.storage
@@ -170,18 +175,20 @@ export default function AddProductModal({
                 finalImageUrl = publicUrlData.publicUrl;
               }
             } else {
-              console.warn("Storage upload error, fallback to base64 preview:", uploadError);
+              if (import.meta.env.DEV) console.warn("Storage upload gagal:", uploadError);
               finalImageUrl = imagePreview;
             }
           } catch (storageErr) {
-            console.warn("Storage upload error, fallback to base64 preview:", storageErr);
+            if (import.meta.env.DEV) console.warn("Storage upload gagal:", storageErr);
             finalImageUrl = imagePreview;
           }
         } else {
           finalImageUrl = imagePreview;
         }
       } else if (uploadMode === "url" && imageUrlInput.trim()) {
-        finalImageUrl = imageUrlInput.trim();
+        const safeUrl = safeImageUrl(imageUrlInput.trim(), null);
+        if (!safeUrl) throw new Error("URL gambar harus diawali https://");
+        finalImageUrl = safeUrl;
       } else if (uploadMode === "file" && imagePreview) {
         finalImageUrl = imagePreview;
       }
@@ -204,7 +211,7 @@ export default function AddProductModal({
             sellerLat = sellerRow.lat != null ? sellerRow.lat : null;
             sellerLng = sellerRow.lng != null ? sellerRow.lng : null;
           }
-        } catch (e) { console.warn("Gagal ambil lokasi penjual:", e); }
+        } catch (e) { if (import.meta.env.DEV) console.warn("Gagal ambil lokasi penjual:", e); }
       }
 
       const newProductData = {
@@ -769,7 +776,7 @@ export default function AddProductModal({
                     <input
                       type="file"
                       ref={fileInputRef}
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       onChange={handleFileChange}
                       style={{ display: "none" }}
                     />

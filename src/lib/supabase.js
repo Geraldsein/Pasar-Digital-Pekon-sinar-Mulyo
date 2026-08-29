@@ -6,7 +6,17 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('your-project-id'));
 
 // Initialize Supabase client (anon - for normal users)
-export const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey) : null;
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+        flowType: 'pkce',
+        storageKey: 'umkm-desa-auth',
+      },
+    })
+  : null;
 
 // NOTE: Service role key NEVER dipakai di client bundle — hanya via server/Edge Function.
 // Superadmin role di-set manual di table admin_users (role='superadmin').
@@ -24,7 +34,7 @@ const getUserRoleFromDb = async (email) => {
       .maybeSingle();
     return data?.role || null;
   } catch (error) {
-    console.warn('Role check error:', error);
+    if (import.meta.env.DEV) console.warn('Role check error:', error);
     return null;
   }
 };

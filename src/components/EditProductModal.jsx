@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { X, AlertCircle, Save, UploadCloud, Trash2, Link as LinkIcon } from "lucide-react";
+import { ALLOWED_IMAGE_TYPES, safeImageUrl } from "../lib/utils";
 
 export default function EditProductModal({ product, categories, onClose, onProductUpdated }) {
   const [title, setTitle] = useState(product.title);
@@ -27,7 +28,7 @@ export default function EditProductModal({ product, categories, onClose, onProdu
   const handleFileChange = (e) => { if (e.target.files?.[0]) handleFileSelected(e.target.files[0]); };
 
   const handleFileSelected = (file) => {
-    if (!file.type.startsWith("image/")) { setErrorMsg("File harus berupa gambar (JPG, PNG, WEBP)."); return; }
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) { setErrorMsg("Format gambar harus JPG, PNG, atau WEBP."); return; }
     if (file.size > 5 * 1024 * 1024) { setErrorMsg("Ukuran gambar maksimal 5MB."); return; }
     setErrorMsg("");
     const reader = new FileReader();
@@ -44,12 +45,17 @@ export default function EditProductModal({ product, categories, onClose, onProdu
 
     try {
       if (!title || !price || !desc) throw new Error("Nama produk, harga, dan deskripsi harus diisi.");
+      if (Number(price) <= 0) throw new Error("Harga harus lebih dari 0.");
+      if (Number(price) > 1_000_000_000) throw new Error("Harga maksimal Rp 1.000.000.000.");
+      if (title.length > 120) throw new Error("Nama produk maksimal 120 karakter.");
+      if (desc.length > 2000) throw new Error("Deskripsi maksimal 2000 karakter.");
 
       let finalImage = product.image;
       if (uploadMode === "file" && imagePreview) {
         finalImage = imagePreview;
       } else if (uploadMode === "url" && imageUrlInput.trim()) {
-        finalImage = imageUrlInput.trim();
+        finalImage = safeImageUrl(imageUrlInput.trim(), null);
+        if (!finalImage) throw new Error("URL gambar harus diawali https://");
       }
 
       const updatedProduct = {
@@ -174,7 +180,7 @@ export default function EditProductModal({ product, categories, onClose, onProdu
                   <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
                     style={{ border: `2px dashed ${isDragging ? "#2563EB" : "#CBD5E1"}`, background: isDragging ? "#EFF6FF" : "#F8FAFC", borderRadius: "12px", padding: "24px 16px", textAlign: "center", cursor: "pointer", transition: "all 0.2s ease" }}>
-                    <input type="file" ref={fileInputRef} accept="image/*" onChange={handleFileChange} style={{ display: "none" }} />
+                    <input type="file" ref={fileInputRef} accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} style={{ display: "none" }} />
                     <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                       <UploadCloud size={24} />
                     </div>

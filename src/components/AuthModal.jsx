@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Store } from 'lucide-react';
 import BaseModal from "./ui/BaseModal";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
@@ -16,14 +16,24 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
+  const failedAttempts = useRef(0);
+  const lockedUntil = useRef(0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+    setInfoMsg('');
     setLoading(true);
 
     try {
       if (isLogin) {
+        const now = Date.now();
+        if (now < lockedUntil.current) {
+          const wait = Math.ceil((lockedUntil.current - now) / 1000);
+          throw new Error(`Terlalu banyak percobaan gagal. Coba lagi dalam ${wait} detik.`);
+        }
+
         if (!email || !password) {
           throw new Error('Email dan password tidak boleh kosong');
         }
@@ -33,14 +43,21 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
         }
 
         // Real Supabase login
-        const emailInput = email.includes('@') ? email : `${email}@umkmdesa.id`;
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: emailInput,
+          email: email.trim().toLowerCase(),
           password: password
         });
 
-        if (error) throw error;
+        if (error) {
+          failedAttempts.current += 1;
+          if (failedAttempts.current >= 5) {
+            lockedUntil.current = Date.now() + 60_000;
+            failedAttempts.current = 0;
+          }
+          throw new Error('Email atau password salah.');
+        }
         if (data.user) {
+          failedAttempts.current = 0;
           // Role will be determined by App.jsx via detectUserRole
           if (onAuthSuccess) onAuthSuccess(data.user);
         }
@@ -51,34 +68,25 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
         if (password !== confirmPassword) {
           throw new Error('Password dan konfirmasi password tidak cocok');
         }
-        if (password.length < 6) {
-          throw new Error('Password minimal 6 karakter');
-        }
-
-        // Cek apakah email sudah terdaftar sebagai Admin — jika iya, blokir pendaftaran mandiri
-        if (supabase && isSupabaseConfigured) {
-          const { data: adminCheck } = await supabase
-            .from('admin_users')
-            .select('role')
-            .eq('email', email.trim().toLowerCase())
-            .maybeSingle();
-
-          if (adminCheck) {
-            throw new Error(
-              adminCheck.role === 'superadmin'
-                ? 'Akun ini adalah Super Admin. Silakan login langsung di kolom Login.'
-                : 'Akun admin ini sudah dibuat oleh Super Admin. Silakan login langsung — tidak perlu mendaftar lagi.'
-            );
-          }
+        if (password.length < 12) {
+          throw new Error('Password minimal 12 karakter');
         }
 
         const { data, error } = await supabase.auth.signUp({
-          email: email,
+          email: email.trim().toLowerCase(),
           password: password,
           options: { data: { full_name: fullName } }
         });
 
-        if (error) throw error;
+        if (error) {
+          throw new Error('Pendaftaran gagal. Periksa data Anda atau gunakan email lain.');
+        }
+
+        if (!data.session) {
+          setInfoMsg('Cek email Anda untuk mengonfirmasi pendaftaran, lalu login.');
+          return;
+        }
+
         if (data.user) {
           // Simpan profil seller ke tabel sellers
           await supabase.from('sellers').insert({
@@ -100,6 +108,7 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
   const toggleMode = () => {
     setIsLogin(!isLogin);
     setErrorMsg('');
+    setInfoMsg('');
     setFullName('');
     setEmail('');
     setPassword('');
@@ -154,6 +163,15 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {infoMsg && (
+          <div style={{
+            background: '#DBEAFE', color: '#1E40AF', padding: '12px 14px',
+            borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px'
+          }}>
+            <span>{infoMsg}</span>
           </div>
         )}
 

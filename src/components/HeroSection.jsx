@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, BadgeCheck } from 'lucide-react';
+import { safeImageUrl, debounce } from '../lib/utils';
 
 export default function HeroSection({
   searchQuery,
@@ -11,8 +12,23 @@ export default function HeroSection({
   heroBadgeTitle = '150+ Pelaku UMKM',
   heroBadgeSubtitle = 'Terverifikasi Digital',
 }) {
+  const [localQuery, setLocalQuery] = useState(searchQuery);
+
+  useEffect(() => {
+    setLocalQuery(searchQuery);
+  }, [searchQuery]);
+
+  const pushQuery = useMemo(() => debounce((value) => setSearchQuery(value), 300), [setSearchQuery]);
+
+  const handleChange = (e) => {
+    const value = e.target.value.slice(0, 100);
+    setLocalQuery(value);
+    pushQuery(value);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    setSearchQuery(localQuery);
     if (onSearchSubmit) onSearchSubmit();
   };
 
@@ -29,8 +45,9 @@ export default function HeroSection({
                 type="text"
                 className="search-input"
                 placeholder="Cari produk desa (misal: Kerajinan Bambu)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={localQuery}
+                onChange={handleChange}
+                maxLength={100}
               />
               <button type="submit" className="btn-search">
                 <Search size={18} />
@@ -40,7 +57,7 @@ export default function HeroSection({
           </div>
 
           <div className="hero-image-wrapper">
-            <img src={heroImage} alt={heroTitle} className="hero-img" />
+            <img src={safeImageUrl(heroImage)} alt={heroTitle} className="hero-img" />
             <div className="hero-float-badge">
               <div className="badge-icon-box">
                 <BadgeCheck size={22} />

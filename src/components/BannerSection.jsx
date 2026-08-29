@@ -1,4 +1,5 @@
 import React from 'react';
+import { safeImageUrl } from '../lib/utils';
 
 export default function BannerSection({ onLearnMore, bannerTitle = 'Potensi Desa Digital Kami', bannerDesc = 'Kami percaya bahwa teknologi dapat mempertemukan kearifan lokal dengan pasar yang lebih luas. Melalui platform ini, kami berkomitmen untuk memberdayakan setiap pelaku UMKM di desa agar dapat bersaing secara global sambil tetap menjaga keaslian budaya kami.', bannerImage = 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80' }) {
   return (
@@ -18,7 +19,7 @@ export default function BannerSection({ onLearnMore, bannerTitle = 'Potensi Desa
           <div className="banner-img-container">
             <div className="banner-img-frame">
               <img
-                src={bannerImage}
+                src={safeImageUrl(bannerImage)}
                 alt={bannerTitle}
                 className="banner-img"
               />

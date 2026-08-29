@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import BaseModal from "./ui/BaseModal";
+import { safeImageUrl } from '../lib/utils';
 
 export default function WhatsAppModal({ product, onClose }) {
   const [quantity, setQuantity] = useState(1);
@@ -55,7 +56,7 @@ Mohon konfirmasi ketersediaan barang. Terima kasih!`;
 
           <div className="form-field">
             <div className="modal-order-summary">
-              <img src={product.image} alt={product.title} className="modal-product-img" />
+              <img src={safeImageUrl(product.image)} alt={product.title} className="modal-product-img" />
               <div style={{ flex: 1 }}>
                 <h4 className="font-bold" style={{ fontSize: "1rem", color: "#1E293B", margin: '0 0 4px' }}>
                   {product.title}

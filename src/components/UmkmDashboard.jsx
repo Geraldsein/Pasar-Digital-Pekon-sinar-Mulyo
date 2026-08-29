@@ -4,6 +4,7 @@ import DashboardLayout from './ui/DashboardLayout';
 import StatCard from './ui/StatCard';
 import EditProductModal from './EditProductModal';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { safeImageUrl } from '../lib/utils';
 
 export default function UmkmDashboard({ products, categories, currentUser, onAddProduct, onDeleteProduct, onProductUpdated, onBack }) {
   const [activePanel, setActivePanel] = useState('dashboard');
@@ -69,7 +70,7 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
             setMapsLink(data.maps_link || '');
             setPastedLoc(data.maps_link || (data.lat != null && data.lng != null ? `${data.lat}, ${data.lng}` : ''));
           }
-        } catch (e) { console.warn('Gagal memuat profil:', e); }
+        } catch (e) { if (import.meta.env.DEV) console.warn('Gagal memuat profil:', e); }
       }
       setProfileLoading(false);
     };
@@ -342,7 +343,7 @@ export default function UmkmDashboard({ products, categories, currentUser, onAdd
                 background: 'white', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(15, 44, 89, 0.08)'
               }}>
                 <div style={{ height: '150px', background: '#F1F5F9', overflow: 'hidden' }}>
-                  <img src={product.image || ''} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={safeImageUrl(product.image)} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>

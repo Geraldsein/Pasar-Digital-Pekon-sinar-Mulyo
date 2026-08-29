@@ -3,19 +3,21 @@ import React from "react";
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, message: "" };
+    this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error) {
-    return { hasError: true, message: error?.message || "Terjadi kesalahan." };
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary caught:", error, errorInfo);
+    if (import.meta.env.DEV) {
+      console.error("ErrorBoundary caught:", error, errorInfo);
+    }
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, message: "" });
+    this.setState({ hasError: false });
   };
 
   render() {
@@ -44,15 +46,9 @@ export default class ErrorBoundary extends React.Component {
             }}>
               Terjadi Kesalahan
             </div>
-            <p style={{ fontSize: '0.95rem', color: '#64748B', marginBottom: '8px' }}>
-              Halaman tidak dapat dimuat.
+            <p style={{ fontSize: '0.95rem', color: '#64748B', marginBottom: '16px' }}>
+              Halaman tidak dapat dimuat. Silakan muat ulang halaman ini.
             </p>
-            <pre style={{
-              background: '#FEF2F2', color: '#991B1B', padding: '12px', borderRadius: '8px',
-              fontSize: '0.8rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: '16px 0', textAlign: 'left'
-            }}>
-              {this.state.message}
-            </pre>
             <button onClick={this.handleReset} style={{
               background: '#1E40AF', color: 'white', border: 'none', padding: '10px 24px',
               borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer'

@@ -4,6 +4,10 @@
       "source": "/(.*)",
       "headers": [
         {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
           "key": "X-Frame-Options",
           "value": "DENY"
         },
@@ -16,8 +20,12 @@
           "value": "strict-origin-when-cross-origin"
         },
         {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(), camera=(), microphone=(), payment=(), usb=()"
+        },
+        {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://rbracyxkrqngjqkzthkh.supabase.co; frame-src https://www.openstreetmap.org https://maps.google.com https://*.google.com; connect-src 'self' https://*.supabase.co https://rbracyxkrqngjqkzthkh.supabase.co; base-uri 'self'; form-action 'self'"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://images.unsplash.com https://rbracyxkrqngjqkzthkh.supabase.co; frame-src https://www.openstreetmap.org https://www.google.com https://maps.google.com; connect-src 'self' https://rbracyxkrqngjqkzthkh.supabase.co wss://rbracyxkrqngjqkzthkh.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
         }
       ]
     }

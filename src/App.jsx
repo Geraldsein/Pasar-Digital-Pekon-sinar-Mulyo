@@ -44,38 +44,44 @@ export default function App() {
     banner_desc: 'Kami percaya bahwa teknologi dapat mempertemukan kearifan lokal dengan pasar yang lebih luas. Melalui platform ini, kami berkomitmen untuk memberdayakan setiap pelaku UMKM di desa agar dapat bersaing secara global sambil tetap menjaga keaslian budaya kami.',
     banner_image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80'
   });
-  const [frozenUmkm] = useState([]);
+  const [frozenUmkm, setFrozenUmkm] = useState([]);
   const [umkmUsers, setUmkmUsers] = useState([]);
 
-  // ── Fetch daftar akun UMKM ──────────────────────────────────────────────
+  // ── Fetch daftar akun UMKM (hanya untuk admin/superadmin) ───────────────
   const fetchUmkmUsers = async () => {
     try {
       if (!supabase || !isSupabaseConfigured) return;
       const { data, error } = await supabase
         .from('sellers')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('phone, user_id, business_name, nib, frozen, created_at')
+        .order('created_at', { ascending: false })
+        .range(0, 199);
       if (!error && data) setUmkmUsers(data);
     } catch (err) {
-      console.error('Error fetching UMKM users:', err);
+      if (import.meta.env.DEV) console.error('Error fetching UMKM users:', err);
     }
   };
 
   // ── Hapus akun UMKM ─────────────────────────────────────────────────────
   const handleDeleteUmkmUser = async (userId, email) => {
-    try {
-      if (!supabase || !isSupabaseConfigured) return;
-      // 1. Hapus produk milik user ini
-      await supabase.from('products').delete().eq('user_id', userId);
-      // 2. Hapus dari tabel sellers (profil UMKM)
-      await supabase.from('sellers').delete().eq('user_id', userId);
-      // Update state lokal
-      setUmkmUsers(prev => prev.filter(u => u.email !== email));
-      setProducts(prev => prev.filter(p => p.user_id !== userId && p.userEmail !== email));
-    } catch (err) {
-      console.error('Error deleting UMKM user:', err);
-      throw err;
+    if (!supabase || !isSupabaseConfigured) {
+      throw new Error('Supabase belum dikonfigurasi.');
     }
+    // 1. Hapus produk milik user ini
+    const { error: productErr } = await supabase.from('products').delete().eq('user_id', userId);
+    if (productErr) throw new Error('Gagal menghapus produk UMKM ini.');
+    // 2. Hapus dari tabel sellers (profil UMKM)
+    const { error: sellerErr } = await supabase.from('sellers').delete().eq('user_id', userId);
+    if (sellerErr) throw new Error('Gagal menghapus profil UMKM ini.');
+    // Update state lokal
+    setUmkmUsers(prev => prev.filter(u => u.email !== email));
+    setProducts(prev => prev.filter(p => p.user_id !== userId && p.userEmail !== email));
+  };
+
+  const handleToggleFreezeUmkm = (key) => {
+    setFrozenUmkm((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   };
 
   // Supabase Auth Listener & Session Check
@@ -111,8 +117,10 @@ export default function App() {
 
     if (role === 'superadmin') {
       setShowSuperAdminDashboard(true);
+      fetchUmkmUsers();
     } else if (role === 'admin') {
       setAdminViewInternal(true);
+      fetchUmkmUsers();
     } else if (role === 'umkm') {
       setShowUmkmDashboard(true);
     }
@@ -120,7 +128,7 @@ export default function App() {
 
   const handleLogout = async () => {
     if (supabase) {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'global' });
     }
     setCurrentUser(null);
     setAdminViewInternal(false);
@@ -171,7 +179,8 @@ export default function App() {
         const { data: prodData, error: prodErr } = await supabase
           .from("products")
           .select("*")
-          .order("id", { ascending: false });
+          .order("id", { ascending: false })
+          .range(0, 499);
         if (!prodErr && prodData) {
           const normalized = prodData.map((p) => ({
             ...p,
@@ -182,7 +191,7 @@ export default function App() {
           setProducts(normalized);
         }
       } catch (err) {
-        console.warn("Supabase fetch error, fallback to mock data:", err);
+        if (import.meta.env.DEV) console.warn("Supabase fetch error:", err);
       } finally {
         setLoading(false);
       }
@@ -191,23 +200,19 @@ export default function App() {
       try {
         const { data: contentData } = await supabase
           .from("site_content")
-          .select("*");
+          .select("key, value");
         if (contentData && contentData.length > 0) {
           const obj = {};
           contentData.forEach((row) => { obj[row.key] = row.value; });
           setSiteContent((prev) => ({ ...prev, ...obj }));
         }
-      } catch { /* ignore */ }
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn("site_content fetch error:", err);
+      }
     };
 
     fetchData();
   }, []);
-
-  // ── Load umkm users (Supabase) ──────────────────────────────────────────
-  useEffect(() => {
-    fetchUmkmUsers();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSupabaseConfigured]);
 
   const handleProductAdded = (newProduct) => {
     setProducts((prev) => [newProduct, ...prev]);
@@ -215,6 +220,7 @@ export default function App() {
 
   const handleVerifyProduct = async (productId, verified, rejectionReason) => {
     const newVerified = verified;
+    const snapshot = products;
     // Optimistic UI state update (matches string or number IDs)
     setProducts((prev) =>
       prev.map((p) =>
@@ -246,16 +252,17 @@ export default function App() {
           .from('products')
           .update(updatePayload)
           .eq('id', productId);
-        if (error) {
-          console.warn('Supabase update warning:', error.message || error);
-        }
+        if (error) throw error;
       }
     } catch (err) {
-      console.error('Error verifying product in Supabase:', err);
+      if (import.meta.env.DEV) console.warn('Verify product failed:', err);
+      setProducts(snapshot);
+      alert('Gagal memperbarui status produk. Perubahan dibatalkan.');
     }
   };
 
   const handleDeleteProduct = async (productId) => {
+    const snapshot = products;
     // Optimistic UI state update
     setProducts((prev) => prev.filter((p) => String(p.id) !== String(productId)));
 
@@ -265,16 +272,17 @@ export default function App() {
           .from('products')
           .delete()
           .eq('id', productId);
-        if (error) {
-          console.warn('Supabase delete warning:', error.message || error);
-        }
+        if (error) throw error;
       }
     } catch (err) {
-      console.error('Error deleting product in Supabase:', err);
+      if (import.meta.env.DEV) console.warn('Delete product failed:', err);
+      setProducts(snapshot);
+      alert('Gagal menghapus produk. Perubahan dibatalkan.');
     }
   };
 
   const handleProductUpdated = async (updatedProduct) => {
+    const snapshot = products;
     // Optimistic UI state update
     setProducts((prev) =>
       prev.map((p) =>
@@ -288,41 +296,45 @@ export default function App() {
           .from('products')
           .update({ ...updatedProduct, updated_at: new Date().toISOString() })
           .eq('id', updatedProduct.id);
-        if (error) {
-          console.warn('Supabase update warning:', error.message || error);
-        }
+        if (error) throw error;
       }
     } catch (err) {
-      console.error('Error updating product in Supabase:', err);
+      if (import.meta.env.DEV) console.warn('Update product failed:', err);
+      setProducts(snapshot);
+      alert('Gagal menyimpan perubahan produk. Perubahan dibatalkan.');
     }
   };
 
   const handleSaveSiteContent = async (content) => {
     if (!supabase || !isSupabaseConfigured) return;
     try {
-      for (const [key, value] of Object.entries(content)) {
-        await supabase.from('site_content').upsert(
-          { key, value: String(value) },
-          { onConflict: 'key' }
-        );
-      }
+      const rows = Object.entries(content).map(([key, value]) => ({
+        key,
+        value: String(value),
+      }));
+      const { error } = await supabase
+        .from('site_content')
+        .upsert(rows, { onConflict: 'key' });
+      if (error) throw error;
       setSiteContent((prev) => ({ ...prev, ...content }));
     } catch (err) {
-      console.error('Error saving site content:', err);
+      if (import.meta.env.DEV) console.warn('Save site content failed:', err);
+      alert('Gagal menyimpan konten situs. Coba lagi.');
     }
   };
 
   // Filter products based on search query and selected category
   const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
     return products.filter((item) => {
       const isApproved = item.status === "approved" || item.verified !== false;
       const matchCategory = selectedCategory
         ? item.category === selectedCategory
         : true;
-      const matchSearch = searchQuery.trim()
-        ? item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.sellerName.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchSearch = query
+        ? (item.title ?? '').toLowerCase().includes(query) ||
+          (item.desc ?? '').toLowerCase().includes(query) ||
+          (item.sellerName ?? '').toLowerCase().includes(query)
         : true;
 
       return isApproved && matchCategory && matchSearch && !frozenUmkm.includes(item.sellerPhone);

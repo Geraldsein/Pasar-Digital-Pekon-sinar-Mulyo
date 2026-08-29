@@ -5,7 +5,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import DashboardLayout from './ui/DashboardLayout';
 import StatCard from './ui/StatCard';
 import EditProductModal from './EditProductModal';
-import { buildUmkmList } from '../lib/utils';
+import { buildUmkmList, safeImageUrl } from '../lib/utils';
 
 export default function SuperAdminDashboard({ products, categories, onVerifyProduct, onDeleteProduct, onProductUpdated, onAddProduct, onBack, currentUser, frozenUmkm = [], onDeleteUmkm, siteContent = {}, onSaveSiteContent }) {
   const [activePanel, setActivePanel] = useState('dashboard');
@@ -94,11 +94,15 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
         setAdminUsers([]);
         return;
       }
-      const { data, error } = await supabase.from('admin_users').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('id, email, role, created_at')
+        .order('created_at', { ascending: false })
+        .range(0, 99);
       if (error) throw error;
       setAdminUsers(data || []);
     } catch (err) {
-      console.error('Error fetching admin users:', err);
+      if (import.meta.env.DEV) console.error('Error fetching admin users:', err);
       setErrorMsg('Gagal memuat daftar admin.');
     } finally {
       setLoading(false);
@@ -111,8 +115,8 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
       setErrorMsg('Email dan Password harus diisi.');
       return;
     }
-    if (newAdminPassword.length < 6) {
-      setErrorMsg('Password admin minimal 6 karakter.');
+    if (newAdminPassword.length < 12) {
+      setErrorMsg('Password admin minimal 12 karakter.');
       return;
     }
 
@@ -130,14 +134,25 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
       const res = await supabase.functions.invoke('create_admin', {
         body: { email, password: pwd },
       });
+      // res.error jika HTTP non-2xx
       if (res.error) {
-        throw new Error(res.error.message || 'Gagal membuat akun admin.');
+        const msg = res.error?.message || JSON.stringify(res.error) || 'Gagal membuat akun admin.';
+        throw new Error(msg);
       }
-      if (res.data?.error) {
-        throw new Error(res.data.error);
+      // res.data bisa berisi {ok:true} atau {error:'...'}
+      const data = res.data;
+      if (data && typeof data === 'string') {
+        // Error dari edge function dikirim sebagai teks
+        throw new Error(data);
+      }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      if (!data?.ok) {
+        throw new Error('Respons tidak valid dari server.');
       }
 
-      setSuccessMsg(`✅ Admin berhasil dibuat!\n\nKredensial untuk admin:\n• Email: ${email}\n• Password: ${pwd}\n\nAkun sudah aktif — admin dapat langsung login.`);
+      setSuccessMsg(`✅ Admin ${email} berhasil dibuat. Akun sudah aktif — sampaikan password kepada admin melalui kanal pribadi yang aman, lalu minta admin menggantinya setelah login pertama.`);
       setNewAdminEmail('');
       setNewAdminPassword('');
       fetchAdminUsers();
@@ -337,7 +352,7 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
                 borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(15, 44, 89, 0.08)'
               }}>
                 <div style={{ height: '150px', background: '#F1F5F9', overflow: 'hidden' }}>
-                  <img src={product.image || ''} alt={product.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={safeImageUrl(product.image)} alt={product.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
@@ -658,7 +673,7 @@ export default function SuperAdminDashboard({ products, categories, onVerifyProd
     setPwErr('');
     setPwMsg('');
     if (!pwNew || !pwConfirm) { setPwErr('Semua field harus diisi.'); return; }
-    if (pwNew.length < 6) { setPwErr('Password minimal 6 karakter.'); return; }
+    if (pwNew.length < 12) { setPwErr('Password minimal 12 karakter.'); return; }
     if (pwNew !== pwConfirm) { setPwErr('Konfirmasi password tidak cocok.'); return; }
     setPwLoading(true);
     try {

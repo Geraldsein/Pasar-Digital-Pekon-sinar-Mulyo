@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, MessageSquare, MapPin, CheckCircle2, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import { formatRupiah, sanitizeText } from '../lib/utils';
+import { formatRupiah, sanitizeText, safeImageUrl } from '../lib/utils';
 import LoadingSkeleton from './ui/LoadingSkeleton';
 
 export default function ProductSection({ products, onBuyProduct, onOpenLocation, activeCategoryName, searchQuery }) {
@@ -75,7 +75,7 @@ export default function ProductSection({ products, onBuyProduct, onOpenLocation,
             {paginatedProducts.map((item) => (
               <div key={item.id} className="product-card animate-on-scroll fade-up">
                 <div className="product-img-wrapper">
-                  <img src={item.image} alt={item.title} className="product-img" />
+                  <img src={safeImageUrl(item.image)} alt={item.title} className="product-img" />
                   {item.tag && <div className="product-tag-terlaris">{sanitizeText(item.tag)}</div>}
                 </div>
 

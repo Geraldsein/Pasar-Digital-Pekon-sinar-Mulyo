@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin, Navigation } from 'lucide-react';
 import BaseModal from "./ui/BaseModal";
+import { safeImageUrl } from '../lib/utils';
 
 export default function LocationModal({ product, onClose }) {
   if (!product) return null;
@@ -47,7 +48,7 @@ export default function LocationModal({ product, onClose }) {
 
       <div style={{ padding: '24px' }}>
         <div className="seller-info-card">
-          <img src={product.image} alt={product.title} className="seller-info-img" />
+          <img src={safeImageUrl(product.image)} alt={product.title} className="seller-info-img" />
           <div style={{ flex: 1 }}>
             <div className="seller-info-label">{product.title}</div>
             <h4 className="seller-info-name">{product.sellerName}</h4>
